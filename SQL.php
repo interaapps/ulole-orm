@@ -18,7 +18,10 @@ class SQL {
             $db_host      =  $host;
             $db_driver    =  $driver;
         }
-        $this->con = new \PDO($db_driver.':host='.$db_host.';dbname='.$db_database, $db_username, $db_password);
+        if ($db_driver=="sqlite")
+            $this->con = new \PDO($db_driver.':'.$db_database);
+        else
+            $this->con = new \PDO($db_driver.':host='.$db_host.';dbname='.$db_database, $db_username, $db_password);
     }
 
     function getObject() {
