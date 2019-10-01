@@ -13,7 +13,13 @@ class Selector {
     }
 
     function escapeString($str) {
-        return str_replace('"', '\"', $str);
+        if (strlen($str)>0)
+        if ($str[strlen($str)-1]=="\\") {
+            $str[strlen($str)-1] = "\\";
+            $str[strlen($str)] = "\\";
+        }
+        
+        return  str_replace('"', '\"', $str);
     }
 
     function orwhere($sel1, $operator, $sel2=null) {
