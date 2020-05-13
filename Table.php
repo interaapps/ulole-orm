@@ -46,6 +46,7 @@ class Table {
         $this->__database__ = $database;
     }
 
+
     function getObject() {
         return $this->__databaseObj__->getObject();
     }
@@ -68,5 +69,10 @@ class Table {
     function update($select = "*") {
         $con = $this->__databaseObj__->getObject();
         return (new Update($this, $select, $this->__databaseObj__));
+    }
+
+    function count() {
+        $con = $this->__databaseObj__->getObject();
+        return (new Count($this, $select, $this->__databaseObj__));
     }
 }
