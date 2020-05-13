@@ -38,6 +38,14 @@ class Table {
         $this->__databaseObj__ = SQL::$databases[$this->__database__];
     }
 
+    function setTable(string $table){
+        $this->_table_name_ = $table;
+    }
+
+    function setDatabase(string $database){
+        $this->__database__ = $database;
+    }
+
     function getObject() {
         return $this->__databaseObj__->getObject();
     }
