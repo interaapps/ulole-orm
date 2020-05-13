@@ -73,6 +73,6 @@ class Table {
 
     function count() {
         $con = $this->__databaseObj__->getObject();
-        return (new Count($this, $select, $this->__databaseObj__));
+        return (new Count($this, $this->__databaseObj__));
     }
 }
