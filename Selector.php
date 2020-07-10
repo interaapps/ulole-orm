@@ -2,13 +2,15 @@
 namespace modules\uloleorm;
 
 class Selector {
+    private $alreadyUsedLike = false;
+
     function andwhere($sel1, $operator, $sel2=null) {
         if ($sel2 == null) {
             $sel2 = $operator;
             $operator = "=";
         }
 
-        $this->query .= ' AND '.$this->escapeString($sel1).''.$operator.'"'.$this->escapeString($sel2).'"';
+        $this->query .= ' AND '.$this->escapeString($sel1).' '.$operator.'"'.$this->escapeString($sel2).'"';
         return $this;
     }
 
@@ -28,7 +30,7 @@ class Selector {
             $operator = "=";
         }
 
-        $this->query .= ' OR '.$this->escapeString($sel1).''.$operator.'"'.$this->escapeString($sel2).'"';
+        $this->query .= ' OR '.$this->escapeString($sel1).' '.$operator.'"'.$this->escapeString($sel2).'"';
         return $this;
     }
 
@@ -38,7 +40,23 @@ class Selector {
             $operator = "=";
         }
 
-        $this->query .= ' WHERE '.$this->escapeString($sel1).''.$operator.'"'.$this->escapeString($sel2).'"';
+        $this->query .= ' WHERE  '.$this->escapeString($sel1).' '.$operator.'"'.$this->escapeString($sel2).'"';
+        return $this;
+    }
+
+    function like($sel1, $sel2=null) {
+        $this->query .= ' '.( !$this->alreadyUsedLike ? "WHERE" : "" ).' `'.$this->escapeString($sel1).'` LIKE "'.$this->escapeString($sel2).'"';
+        $this->alreadyUsedLike = true;
+        return $this;
+    }
+
+    function or(){
+        $this->query .= ' OR ';
+        return $this;
+    }
+
+    function and(){
+        $this->query .= ' AND ';
         return $this;
     }
 

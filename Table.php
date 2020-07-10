@@ -44,6 +44,7 @@ class Table {
 
     function setDatabase(string $database){
         $this->__database__ = $database;
+        $this->__databaseObj__ = SQL::$databases[$this->__database__];
     }
 
 
