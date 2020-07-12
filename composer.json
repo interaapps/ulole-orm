@@ -1,0 +1,17 @@
+{
+    "name": "interaapps/uloleorm",
+    "type": "library",
+    "authors": [
+        {
+            "name": "JulianFun123",
+            "email": "julianfun123@yahoo.com"
+        }
+    ],
+    "require": {
+    },
+    "autoload": {
+        "psr-4": {
+            "modules\\uloleorm\\": "./"
+        }
+    }
+}
