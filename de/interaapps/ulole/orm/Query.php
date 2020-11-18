@@ -120,8 +120,6 @@ class Query {
     }
 
     public function run($query, $vars = [], $returnResult = false) {
-        echo $query."\n";
-
         $statement = $this->database->getConnection()->prepare($query);
         $result = $statement->execute($vars);
         if ($returnResult)
