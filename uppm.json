@@ -12,9 +12,9 @@
     	"de\\interaapps\\ulole\\orm": "de/interaapps/ulole/orm"
     },
     "directnamespaces": {
-    	"de\\interaapps\\ulole\\router\\Router": "modules/uloleorm/de/interaapps/ulole/orm/Database.php",
-    	"de\\interaapps\\ulole\\router\\Response": "modules/uloleorm/de/interaapps/ulole/orm/ORMModel.php",
-    	"de\\interaapps\\ulole\\router\\Response": "modules/uloleorm/de/interaapps/ulole/orm/UloleORM.php",
-    	"de\\interaapps\\ulole\\router\\Request": "modules/uloleorm/de/interaapps/ulole/orm/Query.php"
+    	"de\\interaapps\\ulole\\orm\\Database": "modules/uloleorm/de/interaapps/ulole/orm/Database.php",
+    	"de\\interaapps\\ulole\\orm\\ORMModel": "modules/uloleorm/de/interaapps/ulole/orm/ORMModel.php",
+    	"de\\interaapps\\ulole\\orm\\UloleORM": "modules/uloleorm/de/interaapps/ulole/orm/UloleORM.php",
+    	"de\\interaapps\\ulole\\orm\\Query": "modules/uloleorm/de/interaapps/ulole/orm/Query.php"
     }
 }
