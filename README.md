@@ -1,6 +1,14 @@
 # Ulole-ORM `2.0`
 ## Getting started
-
+UloleORM is an Object Relation Mapper written in PHP.
+#### Uppm
+```
+uppm install uloleorm
+```
+#### Composer
+```
+composer require interaapps/uloleorm
+```
 ### User.php
 ```php
 <?php
