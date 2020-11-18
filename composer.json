@@ -1,17 +1,19 @@
 {
     "name": "interaapps/uloleorm",
+    "version": "2.0",
     "type": "library",
     "authors": [
         {
             "name": "JulianFun123",
-            "email": "julianfun123@yahoo.com"
+            "email": "julian@gojani.xyz"
         }
     ],
     "require": {
+        "php": ">=7.3.0"
     },
     "autoload": {
         "psr-4": {
-            "modules\\uloleorm\\": "./"
+            "de\\interaapps\\ulole\\orm\\": "./de/interaapps/ulole/orm"
         }
     }
 }

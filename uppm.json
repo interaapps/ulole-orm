@@ -1,13 +1,20 @@
 {
     "name": "uloleorm",
-    "version": "1.0.1",
+    "version": "2.0.0",
     "description": "",
-    "author": "",
+    "author": "Julian Gojani",
     "keywords": [
         "ORM",
-        "PHP",
-        "ULOLE-FRAMEWORK"
+        "PHP"
     ],
     "modules": {},
-    "namespaces": {}
+    "namespace_bindings": {
+    	"de\\interaapps\\ulole\\orm": "de/interaapps/ulole/orm"
+    },
+    "directnamespaces": {
+    	"de\\interaapps\\ulole\\router\\Router": "modules/uloleorm/de/interaapps/ulole/orm/Database.php",
+    	"de\\interaapps\\ulole\\router\\Response": "modules/uloleorm/de/interaapps/ulole/orm/ORMModel.php",
+    	"de\\interaapps\\ulole\\router\\Response": "modules/uloleorm/de/interaapps/ulole/orm/UloleORM.php",
+    	"de\\interaapps\\ulole\\router\\Request": "modules/uloleorm/de/interaapps/ulole/orm/Query.php"
+    }
 }

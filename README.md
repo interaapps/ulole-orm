@@ -1,79 +1,121 @@
-# Ulole ORM
-## A PHP ORM
+# Ulole-ORM `2.0`
+## Getting started
 
-Features:
-- Multi Database support
-- Supports many SQL Server (MySQL, Postgre)
-- Migration System
-
-
+### User.php
 ```php
 <?php
-modules\uloleorm\InitDatabases::init("main", [
-    "driver"  => "mysql",
-    "username"=> "USERNAME",
-    "password"=> "PASSWORD",
-    "database"=> "DATABASE",
-    "server"  => "SERVER",
-    "port"    => 3306
-])
-```
+use de\interaapps\ulole\orm\ORMModel;
 
-### Database
-```php
-<?php
-namespace databases;
+class User {
+    use ORMModel;
 
-use modules\uloleorm\Table;
-class TestTable extends Table {
-
-    public $username, 
-           $password;
-    
-    public function database() {
-        $this->_table_name_ = "user";
-        // The __database__ default value is "main"
-        $this->__database__ = "main";
-    }
-
+    public $id;
+    public $name;
+    public $password;
+    public $description;
 }
 ```
-
+### example.php
 ```php
 <?php
-// New
-$newUser = new databases\TestTable;
-$newUser->username = "User";
-$newUser->password = "1234";
-$newUser->save();
+UloleORM::database("main", new Database(
+    'username', 
+    'password', 
+    'database', 
+    'host',  /* PORT: default localhost */
+    3306, /* PORT: default 3306 */
+    'mysql' /* DRIVER: default mysql (Every PDO Driver usable. ) */
+));
 
-// Select
-$user = new databases\TestTable;
-foreach ($user->select("*")->where("username", "User")->get() as $row) {
-    echo $row["username"];
+UloleORM::register(/*table-name*/ "user", /*Model class*/ User::class);
+
+// Inserting into table
+$user = new User;
+$user->name = "Okay";
+$user->save();
+
+/*
+    Fetching a single table entry
+*/
+
+$user = User::table()
+    ->where("id", 2)
+    ->get();
+
+echo $user->name;
+
+/*
+    Fetching multible entries
+*/
+$users = User::table()
+    ->like("description", "")
+    ->all();
+
+foreach ($users as $user) {
+    echo $user->name;
 }
 
-// Select First
-$user = new databases\TestTable;
-$row = ($user->select("*")->where("username", "User")->first();
-echo $row["username"];
+
+/*
+    Updating
+*/
+User::table()
+    ->where("id", 2)
+    ->update();
+
+// Updating entry
+$user = User::table()->where("id", "1")->get();
+$user->name = "ninel";
+$user->save();
+
+/*
+    Deleting
+*/
+
+User::table()
+    ->where("id", 2)
+    ->delete();
+
+// Deleting entry
+$user = User::table()->where("id", "1")->get();
+$user->delete();
 ```
 
-### Migration
+## Selection
 ```php
 <?php
-namespace databases\migrate;
+User::table()
+    // Simple where. Operator: '='
+    ->where("name", "Guenter")
+    // Where with own opertator. It's also an 'AND' one because we already used where once
+    ->where("name", "=", "Guenter")
 
-use modules\uloleorm\migrate\Migrate;
+    ->like("name", "=", "Guenter")
 
-class TestTable extends Migrate {
-    public function database() {
-        $this->create('user', function($table) {
-            $table->int("id")->ai();
-            $table->string("username");
-            $table->string("password", 255);
-            $table->enum("enumTest", ["val1","val2"]);
-        });
-    }
-}
+    ->and(function($query){
+        $query->where("id", "1");
+    })
+
+    ->or(function($query){
+        $query->where("id", "1");
+    })
+
+    // Nesting
+    ->or(function($query){
+        $query->or(function($query){
+            $query->and(function($query){
+                $query->or(function($query){
+                    $query->where("name", "lol");
+                })
+            })
+        })
+    })
+
+    // Orders by id in a descending order
+    ->orderBy("id", true)
+    // Limit
+    ->limit(10)
+    // Offset (requires a limit to be set)
+    ->offset(0)
+    ->all();
 ```
