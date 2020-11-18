@@ -98,7 +98,7 @@ User::table()
     // Where with own opertator. It's also an 'AND' one because we already used where once
     ->where("name", "=", "Guenter")
 
-    ->like("name", "=", "Guenter")
+    ->like("name", "Guent%")
 
     ->and(function($query){
         $query->where("id", "1");
