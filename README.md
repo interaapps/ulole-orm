@@ -108,6 +108,9 @@ User::table()
         $query->where("id", "1");
     })
 
+    // PHP 7.4+
+    ->or(fn ($query) => $query->where("id", "1") )
+
     // Nesting
     ->or(function($query){
         $query->or(function($query){
@@ -126,4 +129,82 @@ User::table()
     // Offset (requires a limit to be set)
     ->offset(0)
     ->all();
+
+
+User::table()->each(function(User $entry){
+    echo $entry->name."\n";
+});
+
+```
+
+## Migration
+```php
+(new Migrator("main"))
+    ->setLogging(true)
+    ->fromFolder("resources/migrations")
+    ->up();
+
+(new Migrator("main"))
+    ->setLogging(true)
+    ->fromFolder("resources/migrations")
+    ->down(/*default val: 1*/);
+```
+
+#### resources/migrations/migration_22_0_11_create_users.php
+```php
+<?php
+namespace testinglocal\migrations;
+
+use de\interaapps\ulole\orm\Database;
+use de\interaapps\ulole\orm\migration\Blueprint;
+use de\interaapps\ulole\orm\migration\Migration;
+
+/**
+ * CHANGED: 
+ */
+class migration_22_0_11_create_users implements Migration {
+    public function up(Database $database) {
+        return $database->create("users", function (Blueprint $blueprint) {
+            $blueprint->id();
+            $blueprint->string("name");
+            $blueprint->string("password");
+            $blueprint->string("description");
+            $blueprint->enum("gender", ["FEMALE", "MALE", "OTHER", "DO_NOT_ANSWER"])->default('DO_NOT_ANSWER');
+            $blueprint->timestamp("created")->currentTimestamp();
+        });
+    }
+
+    public function down(Database $database) {
+        return $database->drop("users");
+    }
+}
+```
+
+#### resources/migrations/migration_22_0_13_edit_users.php
+```php
+<?php
+namespace testinglocal\migrations;
+
+use de\interaapps\ulole\orm\Database;
+use de\interaapps\ulole\orm\migration\Blueprint;
+use de\interaapps\ulole\orm\migration\Migration;
+
+/**
+ * CHANGED: 
+ */
+class migration_22_0_13_edit_users implements Migration {
+    public function up(Database $database) {
+        return $database->edit("users", function (Blueprint $blueprint) {
+            $blueprint->string("name")->default("Johnson");
+            $blueprint->string("mail");
+        });
+    }
+
+    public function down(Database $database) {
+        return $database->edit("users", function(Blueprint $blueprint){
+            $blueprint->string("name")->nullable()->default(null);
+            $blueprint->string("mail")->drop();
+        });
+    }
+}
 ```

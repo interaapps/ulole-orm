@@ -55,9 +55,11 @@ trait ORMModel {
         $query .= ')';
         
        $statement = UloleORM::getDatabase($database)->getConnection()->prepare($query);
-       
+
        $result = $statement->execute($values);
        $this->{$this->ormInternals_getFieldName('-id')} = UloleORM::getDatabase($database)->getConnection()->lastInsertId();
+       if ($result)
+            $this->ormInternals_entryExists = true;
        return $result;
     }
 

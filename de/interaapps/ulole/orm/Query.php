@@ -40,6 +40,14 @@ class Query {
         return $this->where($field, "LIKE", $like);
     }
 
+    public function orLike($field, $like){
+        return $this->orWhere($field, "LIKE", $like);
+    }
+
+    public function search($field, $like){
+        return $this->where($field, "LIKE", "%".$like."%");
+    }
+
     public function or(Callable $callable) : Query{
         $query = new Query($this->database, $this->model);
         $query->temporaryQuery = true;
@@ -88,6 +96,12 @@ class Query {
             }
         }
         return $result;
+    }
+
+    public function each($closure) {
+        foreach ($this->all() as $entry)
+            $closure($entry);
+        return $this;
     }
 
     public function count() {

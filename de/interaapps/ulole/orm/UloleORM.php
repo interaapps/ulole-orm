@@ -11,6 +11,16 @@ class UloleORM {
         self::$tableNames[$model] = $name;
     }
 
+    public static function registerIfNot($name, $model) {
+        if (!isset(self::$tableNames[$model]))
+            self::$tableNames[$model] = $name;
+    }
+
+    public static function registerMultiple($models = []) {
+        foreach ($models as $name => $model)
+            self::$tableNames[$model] = $name;
+    }
+
     public static function database(string $name, Database $database){
         self::$databases[$name] = $database;
     }
