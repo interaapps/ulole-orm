@@ -8,6 +8,12 @@ class Blueprint {
         $this->columns = [];
     }
 
+    public function custom($name, $type, $size=null) : Column {
+        $column = new Column($name, $type, $size);
+        array_push($this->columns, $column);
+        return $column;
+    }
+
     public function id($name = "id") : Column {
         $column = (new Column($name, "INT"))
             ->ai();
@@ -27,7 +33,69 @@ class Blueprint {
         return $column;
     }
 
+    public function text($name) : Column {
+        $column = new Column($name, "TEXT");
+        array_push($this->columns, $column);
+        return $column;
+    }
+
+    public function varChar($name, $size = null) : Column {
+        $column = new Column($name, "VARCHAR", $size);
+        array_push($this->columns, $column);
+        return $column;
+    }
+    
+    public function tinyInt($name) : Column {
+        return $this->custom($name, "TINYINT");
+    }
+
+    public function bigInt($name) : Column {
+        return $this->custom($name, "BIGINT");
+    }
+
+    public function double($name) : Column {
+        return $this->custom($name, "DOUBLE");
+    }
+
+    public function bit($name) : Column {
+        return $this->custom($name, "BIT");
+    }
+
+    public function float($name) : Column {
+        return $this->custom($name, "FLOAT");
+    }
+
+    public function mediumInt($name) : Column {
+        return $this->custom($name, "MEDIUMINT");
+    }
+
+    public function longText($name) : Column {
+        return $this->custom($name, "LONGTEXT");
+    }
+
+    public function tinyText($name) : Column {
+        return $this->custom($name, "TINYTEXT");
+    }
+
+    public function date($name) : Column {
+        return $this->custom($name, "DATE");
+    }
+
+    public function datetime($name) : Column {
+        return $this->custom($name, "DATETIME");
+    }
+
+    public function year($name) : Column {
+        return $this->custom($name, "YEAR");
+    }
+
     public function enum($name, array $set) : Column {
+        $column = new Column($name, "ENUM", $set);
+        array_push($this->columns, $column);
+        return $column;
+    }
+
+    public function set($name, array $set) : Column {
         $column = new Column($name, "ENUM", $set);
         array_push($this->columns, $column);
         return $column;
