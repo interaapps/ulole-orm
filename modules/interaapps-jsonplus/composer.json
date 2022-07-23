@@ -1,6 +1,6 @@
 {
-    "name": "interaapps/uloleorm",
-    "version": "3.0.0",
+    "name": "interaapps/jsonplus",
+    "version": "1.0.5",
     "type": "library",
     "authors": [
         {
@@ -9,12 +9,11 @@
         }
     ],
     "require": {
-        "php": ">=8.1",
-        "ext-pdo": "*"
+        "php": ">=8.1"
     },
     "autoload": {
         "psr-4": {
-            "de\\interaapps\\ulole\\orm\\": "./de/interaapps/ulole/orm"
+            "de\\interaapps\\jsonplus\\": "src/main/de/interaapps/jsonplus"
         }
     }
 }

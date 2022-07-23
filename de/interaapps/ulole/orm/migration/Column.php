@@ -2,19 +2,19 @@
 namespace de\interaapps\ulole\orm\migration;
 
 class Column {
-    public $name,
-           $type,
-           $ai,
-           $unique,
-           $primary,
-           $size, // Can also be value
-           $default,
-           $nullable = false,
-           $renameTo = null,
-           $drop = false;
+    private string|null $name;
+    private string $type;
+    private bool $ai = false;
+    private bool $unique = false;
+    private bool $primary = false;
+    private string|int|null $size; // Can also be value
+    private mixed $default;
+    private bool $nullable = true;
+    private string|null $renameTo = null;
+    private bool $drop = false;
 
-    private $defaultDefined = false,
-            $escapeDefault = true;
+    private bool $defaultDefined = false;
+    private bool $escapeDefault = true;
 
     public function __construct($name, $type, $size = null) {
         $this->name = $name;

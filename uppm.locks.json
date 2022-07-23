@@ -1,0 +1,10 @@
+{
+    "namespaceBindings": {
+        "de\\interaapps\\jsonplus": "modules\/interaapps-jsonplus\/src\/main\/de\/interaapps\/jsonplus"
+    },
+    "directNamespaceBindings": {},
+    "modules": {
+        "interaapps\/jsonplus": "1.0.5"
+    },
+    "initScripts": []
+}

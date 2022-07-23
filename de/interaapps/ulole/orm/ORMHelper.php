@@ -5,7 +5,12 @@ namespace de\interaapps\ulole\orm;
  * Requires ORMModel
  */
 trait ORMHelper {
-    public static function all($limit = null, $offset = null){
+    /**
+     * @param null $limit
+     * @param null $offset
+     * @return static[]
+     */
+    public static function all($limit = null, $offset = null) : array {
         $query = static::table();
         if ($limit !== null)
             $query->limit($limit);
@@ -15,16 +20,30 @@ trait ORMHelper {
         return $query->all();
     }
 
-    public static function get($id) {
-        $instance = new static();
-        return static::table()->where($instance->ormInternals_getFieldName('-id'), $id)->get();
+    /**
+     * @param mixed $id
+     * @return static|null
+     */
+    public static function get(mixed $id) : static|null {
+        return static::table()->where(UloleORM::getModelInformation(static::class)->getIdentifier(), $id)->get();
     }
 
-    public static function where($var1, $var2, $var3 = null) {
+    /**
+     * @param string $var1
+     * @param mixed|null $var2
+     * @param mixed|null $var3
+     * @return Query<static>
+     */
+    public static function where(string $var1, mixed $var2, mixed $var3 = null) : Query {
         return static::table()->where($var1, $var2, $var3);
     }
 
-    public static function like($field, $val) {
+    /**
+     * @param string $field
+     * @param mixed|null $val
+     * @return Query<static>
+     */
+    public static function like(string $field, mixed $val) : Query {
         return static::table()->like($field, $val);
     }
 }

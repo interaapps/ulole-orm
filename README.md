@@ -1,4 +1,5 @@
-# Ulole-ORM `2.0`
+# Ulole-ORM `3.0`
+
 ## Getting started
 UloleORM is an Object Relation Mapper written in PHP.
 #### Uppm
@@ -13,14 +14,27 @@ composer require interaapps/uloleorm
 ```php
 <?php
 use de\interaapps\ulole\orm\ORMModel;
+use de\interaapps\ulole\orm\attributes\Column;
+use de\interaapps\ulole\orm\attributes\Table;
 
+#[Table("users")]
 class User {
     use ORMModel;
 
-    public $id;
-    public $name;
-    public $password;
-    public $description;
+    #[Column]
+    public int $id;
+    
+    #[Column]
+    public ?string $name;
+    
+    #[Column(name: 'mail')]
+    public ?string $eMail;
+    
+    #[Column]
+    public ?string $password;
+    
+    #[Column]
+    public ?string $description;
 }
 ```
 ### example.php
@@ -35,7 +49,10 @@ UloleORM::database("main", new Database(
     'mysql' /* DRIVER: default mysql (Every PDO Driver usable. ) */
 ));
 
-UloleORM::register(/*table-name*/ "user", /*Model class*/ User::class);
+UloleORM::register(User::class);
+
+// Auto migrates all tables (You might not do this every time the user opens the page. Move it into a cli-command or something like this)
+UloleORM::autoMigrate();
 
 // Inserting into table
 $user = new User;
@@ -148,6 +165,11 @@ User::table()->each(function(User $entry){
     ->setLogging(true)
     ->fromFolder("resources/migrations")
     ->down(/*default val: 1*/);
+```
+## Auto-Migrate
+```php
+// Automatically migrates all columns by its class structure and attributes
+UloleORM::autoMigrate();
 ```
 
 #### resources/migrations/migration_22_0_11_create_users.php

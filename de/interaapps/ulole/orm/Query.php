@@ -1,23 +1,39 @@
 <?php
 namespace de\interaapps\ulole\orm;
 
+use Closure;
 use PDOStatement;
 
+/**
+ * @template T
+ */
 class Query {
-    private $queries = [];
-    private $model;
-    private $database;
-    private $limit = null;
-    private $offset = null;
-    private $orderBy = null;
-    protected $temporaryQuery = false;
+    private array $queries = [];
+    private string $model;
+    private Database $database;
+    private int|null $limit = null;
+    private int|null $offset = null;
+    private array|null $orderBy = null;
+    protected bool $temporaryQuery = false;
 
-    public function __construct($database, $model) {
+    /**
+     * @param Database $database
+     * @param class-string<T> $model
+     */
+    public function __construct(Database $database, string $model) {
         $this->database = $database;
         $this->model    = $model;
     }
 
-    public function where($var1, $var2, $var3 = null) : Query {        
+    /**
+     * if var3 is set var2 will be the operator
+     *
+     * @param string $var1
+     * @param mixed $var2
+     * @param mixed|null $var3
+     * @return $this
+     */
+    public function where(string $var1, mixed $var2, mixed $var3 = null) : Query {
         $field = $var1;
         $operator = $var2;
         $value = $var2;
@@ -26,85 +42,131 @@ class Query {
         } else
             $value = $var3;
 
-        array_push($this->queries, ['type'=>'AND', 'query'=>'`'.$field.'` '.$operator.' ?', 'val' => $value]);
+        $this->queries[] = ['type' => 'AND', 'query' => '`' . $field . '` ' . $operator . ' ?', 'val' => $value];
         return $this;
     }
 
-    public function orWhere($var1, $var2, $var3 = null){
+    /**
+     * @param string $var1
+     * @param mixed $var2
+     * @param mixed|null $var3
+     * @return $this
+     */
+    public function orWhere(string $var1, mixed $var2, mixed $var3 = null) : Query {
         return $this->or(function($query) use ($var1, $var2, $var3) {
             $query->where($var1, $var2, $var3);
         });
     }
 
-    public function like($field, $like){
+    /**
+     * @param string $field
+     * @param mixed $like
+     * @return $this
+     */
+    public function like(string $field, mixed $like) : Query {
         return $this->where($field, "LIKE", $like);
     }
 
-    public function orLike($field, $like){
+    /**
+     * @param string $field
+     * @param mixed $like
+     * @return $this
+     */
+    public function orLike(string $field, mixed $like) : Query {
         return $this->orWhere($field, "LIKE", $like);
     }
 
-    public function search($field, $like){
+    /**
+     * @param $field
+     * @param $like
+     * @return $this
+     */
+    public function search($field, $like) : Query {
         return $this->where($field, "LIKE", "%".$like."%");
     }
 
-    public function or(Callable $callable) : Query{
+    /**
+     * @param callable $callable
+     * @return $this
+     */
+    public function or(Callable $callable) : Query {
         $query = new Query($this->database, $this->model);
         $query->temporaryQuery = true;
         $callable($query);
-        array_push($this->queries, ['type'=>'OR', 'queries' => $query]);
+        $this->queries[] = ['type' => 'OR', 'queries' => $query];
         return $this;
     }
 
-    public function and(Callable $callable) : Query{
+    /**
+     * @param callable $callable
+     * @return $this
+     */
+    public function and(Callable $callable) : Query {
         $query = new Query($this->database, $this->model);
         $query->temporaryQuery = true;
         $callable($query);
-        array_push($this->queries, ['type'=>'AND', 'queries' => $query]);
+        $this->queries[] = ['type' => 'AND', 'queries' => $query];
         return $this;
     }
 
+    /**
+     * @param $field
+     * @param $value
+     * @return $this
+     */
     public function set($field, $value) : Query {
-        array_push($this->queries, ['type'=>'SET', 'query'=>'`'.$field.'` = ?', 'val' => $value]);
+        $this->queries[] = ['type' => 'SET', 'query' => '`' . $field . '` = ?', 'val' => $value];
         return $this;
     }
 
-    public function get() {
-        $vars = [];
+    /**
+     * @return T
+     */
+    public function first() : mixed {
         if ($this->limit === null)
             $this->limit(1);
-        $query = $this->buildQuery();
-        $vars = array_merge($vars, $query->vars);
-        $statement = $this->run('SELECT * FROM '.UloleORM::getTableName($this->model).$query->query.';', $vars);
-        $result = $statement->fetch();
-        if ($result !== false)
-            $result->ormInternals_setEntryExists();
 
-        return $result === false ? null : $result ;
+        return $this->get()[0] ?? null;
     }
 
-    public function all() {
+    /**
+     * @return T[]
+     */
+    public function all() : array {
         $vars = [];
         $query = $this->buildQuery();
         $vars = array_merge($vars, $query->vars);
         
         $statement = $this->run('SELECT * FROM '.UloleORM::getTableName($this->model).$query->query.';', $vars);
         $result = $statement->fetchAll();
-        if (is_array($result)) {
-            foreach ($result as $entry){
-                $entry->ormInternals_setEntryExists();
+        foreach ($result as $entry){
+            $entry->ormInternals_setEntryExists();
+            foreach (UloleORM::getModelInformation($this->model)->getFields() as $name => $colInfo) {
+                if (isset($entry->{$colInfo->getFieldName()}))
+                    $entry->{$name} = $entry->{$colInfo->getFieldName()};
             }
         }
         return $result;
     }
 
-    public function each($closure) {
+    /**
+     * @return T[]
+     */
+    public function get() : mixed {
+        return $this->all();
+    }
+
+    /**
+     * @param Closure $closure
+     * @return $this
+     */
+    public function each(Closure $closure) : Query {
         foreach ($this->all() as $entry)
             $closure($entry);
         return $this;
     }
 
-    public function count() {
+    public function count() : int {
         $vars = [];
         $query = $this->buildQuery();
         $vars = array_merge($vars, $query->vars);
@@ -117,7 +179,7 @@ class Query {
         return $result[0];
     }
 
-    public function update(){
+    public function update() : bool {
         $vars = [];
         $query = $this->buildQuery();
         $vars = array_merge($vars, $query->vars);
@@ -125,7 +187,7 @@ class Query {
         return $this->run('UPDATE '.UloleORM::getTableName($this->model).$query->query.';', $vars, true);
     }
 
-    public function delete(){
+    public function delete() : bool {
         $vars = [];
         $query = $this->buildQuery();
         $vars = array_merge($vars, $query->vars);
@@ -133,8 +195,9 @@ class Query {
         return $this->run('DELETE FROM '.UloleORM::getTableName($this->model).$query->query.';', $vars, true);
     }
 
-    public function run($query, $vars = [], $returnResult = false) {
+    public function run($query, $vars = [], $returnResult = false) : PDOStatement|bool|null {
         $statement = $this->database->getConnection()->prepare($query);
+
         $result = $statement->execute($vars);
         if ($returnResult)
             return $result;
@@ -144,7 +207,7 @@ class Query {
         return $statement;
     }
 
-    protected function buildQuery(){
+    protected function buildQuery() : object {
         $out = (object) ["query" => '', 'vars' => []];
 
 
@@ -178,7 +241,7 @@ class Query {
                 } else
                     $out->query .= ",";
                 $out->query .= ' '.$query["query"].' ';
-                array_push($out->vars, $query['val']);
+                $out->vars[] = $query['val'];
             }
         }
 
@@ -191,22 +254,33 @@ class Query {
         return $out;
     }
 
-    public function getQueries() {
+    public function getQueries() : array {
         return $this->queries;
     }
 
-    public function limit($limit) {
+    /**
+     * @param $limit
+     * @return $this
+     */
+    public function limit($limit) : Query {
         $this->limit = $limit;
         return $this;
     }
 
-    public function orderBy($orderBy, $desc = false) {
+    /**
+     * @param $orderBy
+     * @param bool $desc
+     * @return $this
+     */
+    public function orderBy($orderBy, $desc = false) : Query {
         $this->orderBy = ["orderBy"=>$orderBy, "desc"=>$desc];
-
         return $this;
     }
 
-    public function offset($offset) {
+    /**
+     * @return $this
+     */
+    public function offset($offset) : Query {
         $this->offset = $offset;
         return $this;
     }

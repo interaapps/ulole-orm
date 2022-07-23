@@ -1,20 +1,22 @@
 {
     "name": "uloleorm",
-    "version": "2.0.1",
-    "description": "",
-    "author": "Julian Gojani",
-    "keywords": [
-        "ORM",
-        "PHP"
-    ],
-    "modules": {},
+    "version": "3.0.0",
+    "repositories": [],
+    "run": {},
+    "build": {},
+    "serve": {},
+    "modules": {
+        "interaapps\/jsonplus": "1.0.5"
+    },
+    "namespaceBindings": {},
+    "initScripts": [],
     "namespace_bindings": {
-    	"de\\interaapps\\ulole\\orm": "de/interaapps/ulole/orm"
+        "de\\interaapps\\ulole\\orm": "de\/interaapps\/ulole\/orm"
     },
     "directnamespaces": {
-    	"de\\interaapps\\ulole\\orm\\Database": "modules/uloleorm/de/interaapps/ulole/orm/Database.php",
-    	"de\\interaapps\\ulole\\orm\\ORMModel": "modules/uloleorm/de/interaapps/ulole/orm/ORMModel.php",
-    	"de\\interaapps\\ulole\\orm\\UloleORM": "modules/uloleorm/de/interaapps/ulole/orm/UloleORM.php",
-    	"de\\interaapps\\ulole\\orm\\Query": "modules/uloleorm/de/interaapps/ulole/orm/Query.php"
+        "de\\interaapps\\ulole\\orm\\Database": "modules\/uloleorm\/de\/interaapps\/ulole\/orm\/Database.php",
+        "de\\interaapps\\ulole\\orm\\ORMModel": "modules\/uloleorm\/de\/interaapps\/ulole\/orm\/ORMModel.php",
+        "de\\interaapps\\ulole\\orm\\UloleORM": "modules\/uloleorm\/de\/interaapps\/ulole\/orm\/UloleORM.php",
+        "de\\interaapps\\ulole\\orm\\Query": "modules\/uloleorm\/de\/interaapps\/ulole\/orm\/Query.php"
     }
 }

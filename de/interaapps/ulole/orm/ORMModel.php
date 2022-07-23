@@ -1,51 +1,48 @@
 <?php
 namespace de\interaapps\ulole\orm;
 
-trait ORMModel {
-    protected $ormInternals_entryExists = false;
-    protected $ormInternals_defaultSettings = [
-        "identifier" => 'id',
-        "exclude" => [
-            "ormInternals_defaultSettings",
-            "ormInternals_entryExists",
-            "ormSettings"
-        ]
-    ];
+use de\interaapps\jsonplus\attributes\Serialize;
 
-    public static function table($database = 'main'){
+trait ORMModel {
+    #[Serialize(hidden: true)]
+    private $ormInternals_entryExists = false;
+
+    /**
+     * @param string $database
+     * @return Query<static>
+     */
+    public static function table(string $database = 'main') : Query {
         return new Query(UloleORM::getDatabase($database), static::class);
     }
 
-    public function save($database = 'main'){
+    public function save(string $database = 'main') : bool {
         if ($this->ormInternals_entryExists) {
             $query = self::table($database);
-            foreach (get_object_vars($this) as $fieldName=>$value) {
-                if (in_array($fieldName, $this->ormInternals_getSettings()["exclude"]))
-                    continue;
-                if ($value !== null)
-                    $query->set($this->ormInternals_getFieldName($fieldName), $value);
+            foreach (UloleORM::getModelInformation(static::class)->getFields() as $fieldName=>$modelInformation) {
+                //if (in_array($fieldName, $this->ormInternals_getSettings()["exclude"]))
+                //    continue;
+                if (isset($this->{$fieldName}))
+                    $query->set($modelInformation->getFieldName(), $this->{$fieldName});
             }
-            return $query->where($this->ormInternals_getFieldName('-id'), $this->ormInternals_getField('-id'))->update();
+            return $query->where(UloleORM::getModelInformation(static::class)->getIdentifier(), UloleORM::getModelInformation(static::class)->getIdentifierValue())->update() !== false;
         } else {
             return $this->insert($database);
         }
     }
 
-    public function insert($database = 'main') : bool {
+    public function insert(string $database = 'main') : bool {
         $fields = [];
         $values = [];
-        foreach (get_object_vars($this) as $fieldName=>$value) {
-            if (in_array($fieldName, $this->ormInternals_getSettings()["exclude"]))
-                    continue;
-            if ($value !== null){
-                array_push($fields, $fieldName);
-                array_push($values, $value);
+        foreach (UloleORM::getModelInformation(static::class)->getFields() as $fieldName => $modelInformation) {
+            if (isset($this->{$fieldName})){
+                $fields[] = $modelInformation->getFieldName();
+                $values[] = $this->{$fieldName};
             }
         }
-        
+
         $query = 'INSERT INTO `'.UloleORM::getTableName(static::class).'` (';
-        
-        foreach ($fields as $i => $field) 
+
+        foreach ($fields as $i => $field)
             $query .= ($i == 0 ?'':', ' ) . '`'.$field.'`';
 
         $query .= ') VALUES (';
@@ -53,39 +50,23 @@ trait ORMModel {
         foreach ($values as $i => $value)
             $query .= ($i == 0 ?'':', ' ) . '?';
         $query .= ')';
-        
-       $statement = UloleORM::getDatabase($database)->getConnection()->prepare($query);
 
-       $result = $statement->execute($values);
-       $this->{$this->ormInternals_getFieldName('-id')} = UloleORM::getDatabase($database)->getConnection()->lastInsertId();
-       if ($result)
+        $statement = UloleORM::getDatabase($database)->getConnection()->prepare($query);
+
+        $result = $statement->execute($values);
+        $this->{UloleORM::getModelInformation(static::class)->getIdentifier()} = UloleORM::getDatabase($database)->getConnection()->lastInsertId();
+        if ($result)
             $this->ormInternals_entryExists = true;
-       return $result;
+        return $result;
     }
 
-    public function delete($database = 'main'){
+    public function delete(string $database = 'main') : bool {
         return self::table($database)
-            ->where($this->ormInternals_getFieldName('-id'), $this->ormInternals_getField('-id'))
+            ->where(UloleORM::getModelInformation(static::class)->getIdentifier(), UloleORM::getModelInformation(static::class)->getIdentifierValue($this))
             ->delete();
     }
 
-    protected function ormInternals_getSettings(){
-        if (isset($this->ormSettings) && is_array($this->ormSettings))
-            return array_merge($this->ormInternals_defaultSettings, $this->ormSettings);
-        return $this->ormInternals_defaultSettings;
-    }
-
-    public function ormInternals_setEntryExists(){
+    public function ormInternals_setEntryExists() : void {
         $this->ormInternals_entryExists = true;
-    }
-
-    protected function ormInternals_getFieldName($name){
-        if ($name == '-id')
-            return $this->ormInternals_getSettings()["identifier"];
-        return $name;
-    }
-
-    protected function ormInternals_getField($name){
-        return $this->{$this->ormInternals_getFieldName($name)};
     }
 }
