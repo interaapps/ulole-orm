@@ -8,7 +8,8 @@ use Attribute;
 class Table {
     public function __construct(
         /** Name */
-        public string $value
+        public string $value,
+        public bool $disableAutoMigrate = false
     ) {
     }
 }

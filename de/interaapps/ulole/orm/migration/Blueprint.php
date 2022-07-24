@@ -116,9 +116,9 @@ class Blueprint {
         $columns = [];
         $primaryKeys = [];
         foreach ($this->columns as $column) {
-            $columns[$column->name] = $column->generateStructure();
-            if ($column->primary)
-                array_push($primaryKeys, "`" . ($column->renameTo === null ? $column->name : $column->renameTo) . "`");
+            $columns[$column->getName()] = $column->generateStructure();
+            if ($column->isPrimary())
+                $primaryKeys[] = "`" . ($column->getRenameTo() === null ? $column->getName() : $column->getRenameTo()) . "`";
         }
         if ($addKeys)
             $columns[":primary_key"] = "PRIMARY KEY (" . implode(",", $primaryKeys) . ")";

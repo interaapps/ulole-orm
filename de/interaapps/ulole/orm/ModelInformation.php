@@ -17,6 +17,7 @@ class ModelInformation {
      */
     private array $fields;
     private ?string $name;
+    private bool $disableAutoMigrate = false;
 
     /**
      * @throws ReflectionException
@@ -31,6 +32,7 @@ class ModelInformation {
         if (count($tableAttributes) > 0) {
             $tableAttribute = $tableAttributes[0]->newInstance();
             $this->name = $tableAttribute->value;
+            $this->disableAutoMigrate = $tableAttribute->disableAutoMigrate;
         } else {
             $this->name = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $reflection->getShortName()));
             if (!str_ends_with($this->name, "s"))
@@ -77,11 +79,11 @@ class ModelInformation {
     }
 
     public function getFieldName(string $field): string {
-        return $this->getColumnInformation($field)->getFieldName();
+        return $this->getColumnInformation($field)?->getFieldName() ?? $field;
     }
 
-    public function getColumnInformation(string $name): ColumnInformation {
-        return $this->fields[$name];
+    public function getColumnInformation(string $name): ColumnInformation|null {
+        return $this->fields[$name] ?? null;
     }
 
     public function getFieldValue($obj, string $field): string {
@@ -92,5 +94,9 @@ class ModelInformation {
 
     public function getIdentifierValue($obj): string {
         return $obj->{$this->getIdentifier()};
+    }
+
+    public function isAutoMigrateDisabled(): bool {
+        return $this->disableAutoMigrate;
     }
 }

@@ -105,4 +105,52 @@ class Column {
             $structure .= "AUTO_INCREMENT";
         return $structure;
     }
+
+    public function getName(): ?string {
+        return $this->name;
+    }
+
+    public function isPrimary(): bool {
+        return $this->primary;
+    }
+
+    public function isAi(): bool {
+        return $this->ai;
+    }
+
+    public function isDefaultDefined(): bool {
+        return $this->defaultDefined;
+    }
+
+    public function isDrop(): bool {
+        return $this->drop;
+    }
+
+    public function isEscapeDefault(): bool {
+        return $this->escapeDefault;
+    }
+
+    public function isNullable(): bool {
+        return $this->nullable;
+    }
+
+    public function isUnique(): bool {
+        return $this->unique;
+    }
+
+    public function getDefault(): mixed {
+        return $this->default;
+    }
+
+    public function getRenameTo(): ?string {
+        return $this->renameTo;
+    }
+
+    public function getSize(): mixed {
+        return $this->size;
+    }
+
+    public function getType(): string {
+        return $this->type;
+    }
 }

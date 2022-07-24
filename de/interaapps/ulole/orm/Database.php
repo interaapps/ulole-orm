@@ -88,6 +88,9 @@ class Database {
         }
 
         foreach (UloleORM::getModelInformationList() as $modelInformation) {
+            if ($modelInformation->isAutoMigrateDisabled())
+                continue;
+
             $fields = $modelInformation->getFields();
 
             $columns = array_map(function ($field) use ($modelInformation) {
