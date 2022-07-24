@@ -52,6 +52,13 @@ class UloleORM {
         return self::$databases[$name];
     }
 
+    /**
+     * @return Database[]
+     */
+    public static function getDatabases(): array {
+        return self::$databases;
+    }
+
     public static function autoMigrate() {
         foreach (self::$databases as $database)
             $database->autoMigrate();

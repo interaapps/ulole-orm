@@ -19,6 +19,13 @@ class ModelInformation {
     private ?string $name;
     private bool $disableAutoMigrate = false;
 
+    private const PHP_SQL_TYPES = [
+        "int" => "INTEGER",
+        "float" => "FLOAT",
+        "string" => "TEXT",
+        "bool" => "TINYINT"
+    ];
+
     /**
      * @throws ReflectionException
      */
@@ -98,5 +105,84 @@ class ModelInformation {
 
     public function isAutoMigrateDisabled(): bool {
         return $this->disableAutoMigrate;
+    }
+    
+    public function autoMigrate(array|null $databases = null) : ModelInformation {
+        if ($databases === null)
+            $databases = UloleORM::getDatabases();
+        
+        foreach ($databases as $database) {
+            $tables = [];
+            foreach ($database->query("SHOW TABLES;")->fetchAll() as $r) {
+                $tables[] = $r[0];
+            }
+
+            $fields = $this->getFields();
+
+            $columns = array_map(function ($field) {
+                $type = $field->getColumnAttribute()->sqlType;
+                if ($type == null) {
+                    if (isset(self::PHP_SQL_TYPES[$field->getType()->getName()]))
+                        $type = self::PHP_SQL_TYPES[$field->getType()->getName()];
+                }
+
+                if ($field->getColumnAttribute()->size != null)
+                    $type .= "(" . $field->getColumnAttribute()->size . ")";
+
+                $isIdentifier = $this->getIdentifier() == $field->getFieldName();
+
+                return [
+                    "field" => $field->getFieldName(),
+                    "type" => $type,
+                    "hasIndex" => $field->getColumnAttribute()->index,
+                    "identifier" => $isIdentifier,
+                    "query" => "`" . $field->getFieldName() . "` "
+                        . $type
+                        . ($field->getType()->allowsNull() ? '' : ' NOT NULL')
+                        . ($type == 'INTEGER' && $isIdentifier ? ' AUTO_INCREMENT' : '')
+                ];
+            }, $fields);
+
+            $indexes = array_filter($columns, fn($c) => $c["hasIndex"]);
+
+            if (in_array($this->getName(), $tables)) {
+                $existingFields = array_map(fn($f) => $f[0], $database->query('SHOW COLUMNS FROM ' . $this->getName() . ';')->fetchAll());
+                $existingIndexes = array_map(fn($f) => $f[4], $database->query('SHOW INDEXES FROM ' . $this->getName() . ';')->fetchAll());
+
+                $q = "ALTER TABLE `" . $this->getName() . "` ";
+                $changes = [];
+                foreach ($columns as $column) {
+                    if (in_array($column['field'], $existingFields)) {
+                        $changes[] = "MODIFY COLUMN " . $column["query"];
+                    } else {
+                        $changes[] = "ADD " . $column["query"];
+                    }
+                }
+                foreach ($indexes as $index) {
+                    $index = $index["field"];
+                    if (!in_array($index, $existingIndexes))
+                        $changes[] = 'ADD INDEX (`' . $index . '`);';
+                }
+
+                $q .= implode(", ", $changes) . ';';
+                $database->query($q);
+            } else {
+                $q = "CREATE TABLE " . $this->getName() . " (" .
+                    implode(', ', array_map(fn($c) => $c['query']
+                            . ($c['identifier'] ? ' PRIMARY KEY' : ''
+                            ), $columns)
+                    );
+
+                if (count($indexes) > 0) {
+                    $q .= ", INDEX (" . implode(", ", array_map(fn($c) => $c["field"], $indexes)) . ")";
+                }
+
+                $q .= ");";
+                $database->query($q);
+            }
+        }
+
+        
+        return $this;
     }
 }
