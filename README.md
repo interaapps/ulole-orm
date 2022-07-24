@@ -74,7 +74,7 @@ echo $user->name;
 */
 $users = User::table()
     ->like("description", "")
-    ->all();
+    ->get();
 
 foreach ($users as $user) {
     echo $user->name;
@@ -145,7 +145,7 @@ User::table()
     ->limit(10)
     // Offset (requires a limit to be set)
     ->offset(0)
-    ->all();
+    ->get();
 
 
 User::table()->each(function(User $entry){
