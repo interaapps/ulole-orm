@@ -65,7 +65,7 @@ $user->save();
 
 $user = User::table()
     ->where("id", 2)
-    ->get();
+    ->first();
 
 echo $user->name;
 
@@ -89,7 +89,7 @@ User::table()
     ->update();
 
 // Updating entry
-$user = User::table()->where("id", "1")->get();
+$user = User::table()->where("id", "1")->first();
 $user->name = "ninel";
 $user->save();
 
@@ -102,7 +102,7 @@ User::table()
     ->delete();
 
 // Deleting entry
-$user = User::table()->where("id", "1")->get();
+$user = User::table()->where("id", "1")->first();
 $user->delete();
 ```
 
