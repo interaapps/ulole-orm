@@ -25,7 +25,7 @@ trait ORMModel {
                 if (isset($this->{$fieldName}))
                     $query->set($modelInformation->getFieldName(), $this->{$fieldName});
             }
-            return $query->where(UloleORM::getModelInformation(static::class)->getIdentifier(), UloleORM::getModelInformation(static::class)->getIdentifierValue())->update() !== false;
+            return $query->where(UloleORM::getModelInformation(static::class)->getIdentifier(), UloleORM::getModelInformation(static::class)->getIdentifierValue($this))->update() !== false;
         } else {
             return $this->insert($database);
         }

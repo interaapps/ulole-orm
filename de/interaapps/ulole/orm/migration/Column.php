@@ -8,7 +8,7 @@ class Column {
     private bool $ai = false;
     private bool $unique = false;
     private bool $primary = false;
-    private string|int|null $size; // Can also be value
+    private mixed $size; // Can also be value
     private mixed $default;
     private bool $nullable = true;
     private string|null $renameTo = null;

@@ -68,9 +68,17 @@ class UloleORM {
         return self::$modelInformation[$modelClazz]->getName();
     }
 
+    /**
+     * @param $model
+     * @return ModelInformation
+     * @throws Null
+     */
     public static function getModelInformation($model): ModelInformation {
+        if (!isset(self::$modelInformation[$model]))
+            throw new \Exception("Register the model first with UloleORM::register(".$model."::class);");
         return self::$modelInformation[$model];
     }
+
 
     public static function getAttributesEnabled(): bool {
         return self::$attributesEnabled;
