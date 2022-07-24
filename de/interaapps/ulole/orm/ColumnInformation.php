@@ -9,16 +9,14 @@ use ReflectionProperty;
 use ReflectionType;
 use ReflectionUnionType;
 
-class ColumnInformation
-{
+class ColumnInformation {
     private ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null $type;
 
     public function __construct(
-        private string $fieldName,
-        private Column $columnAttribute,
+        private string             $fieldName,
+        private Column             $columnAttribute,
         private ReflectionProperty $property
-    )
-    {
+    ) {
         $this->type = $property->getType();
     }
 

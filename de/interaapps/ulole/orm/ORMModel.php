@@ -1,4 +1,5 @@
 <?php
+
 namespace de\interaapps\ulole\orm;
 
 use de\interaapps\jsonplus\attributes\Serialize;
@@ -11,14 +12,14 @@ trait ORMModel {
      * @param string $database
      * @return Query<static>
      */
-    public static function table(string $database = 'main') : Query {
+    public static function table(string $database = 'main'): Query {
         return new Query(UloleORM::getDatabase($database), static::class);
     }
 
-    public function save(string $database = 'main') : bool {
+    public function save(string $database = 'main'): bool {
         if ($this->ormInternals_entryExists) {
             $query = self::table($database);
-            foreach (UloleORM::getModelInformation(static::class)->getFields() as $fieldName=>$modelInformation) {
+            foreach (UloleORM::getModelInformation(static::class)->getFields() as $fieldName => $modelInformation) {
                 //if (in_array($fieldName, $this->ormInternals_getSettings()["exclude"]))
                 //    continue;
                 if (isset($this->{$fieldName}))
@@ -30,25 +31,25 @@ trait ORMModel {
         }
     }
 
-    public function insert(string $database = 'main') : bool {
+    public function insert(string $database = 'main'): bool {
         $fields = [];
         $values = [];
         foreach (UloleORM::getModelInformation(static::class)->getFields() as $fieldName => $modelInformation) {
-            if (isset($this->{$fieldName})){
+            if (isset($this->{$fieldName})) {
                 $fields[] = $modelInformation->getFieldName();
                 $values[] = $this->{$fieldName};
             }
         }
 
-        $query = 'INSERT INTO `'.UloleORM::getTableName(static::class).'` (';
+        $query = 'INSERT INTO `' . UloleORM::getTableName(static::class) . '` (';
 
         foreach ($fields as $i => $field)
-            $query .= ($i == 0 ?'':', ' ) . '`'.$field.'`';
+            $query .= ($i == 0 ? '' : ', ') . '`' . $field . '`';
 
         $query .= ') VALUES (';
 
         foreach ($values as $i => $value)
-            $query .= ($i == 0 ?'':', ' ) . '?';
+            $query .= ($i == 0 ? '' : ', ') . '?';
         $query .= ')';
 
         $statement = UloleORM::getDatabase($database)->getConnection()->prepare($query);
@@ -60,13 +61,13 @@ trait ORMModel {
         return $result;
     }
 
-    public function delete(string $database = 'main') : bool {
+    public function delete(string $database = 'main'): bool {
         return self::table($database)
             ->where(UloleORM::getModelInformation(static::class)->getIdentifier(), UloleORM::getModelInformation(static::class)->getIdentifierValue($this))
             ->delete();
     }
 
-    public function ormInternals_setEntryExists() : void {
+    public function ormInternals_setEntryExists(): void {
         $this->ormInternals_entryExists = true;
     }
 }

@@ -1,0 +1,11 @@
+{
+    "namespaceBindings": {
+        "de\\interaapps\\ulole\\module": ".\/src\/main\/de\/interaapps\/ulole\/module",
+        "de\\interaapps\\ulole\\jsonplus": ".\/src\/main\/de\/interaapps\/jsonplus"
+    },
+    "directNamespaceBindings": {},
+    "modules": {
+        "module": "1.0",
+        "interaapps\/jsonplus": "1.0"
+    }
+}

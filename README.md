@@ -1,4 +1,4 @@
-# Ulole-ORM `3.0`
+# Ulole-ORM `3.1`
 
 ## Getting started
 UloleORM is an Object Relation Mapper written in PHP.
@@ -59,31 +59,23 @@ $user = new User;
 $user->name = "Okay";
 $user->save();
 
-/*
-    Fetching a single table entry
-*/
-
+// Fetching a single table entry
 $user = User::table()
     ->where("id", 2)
     ->first();
 
 echo $user->name;
 
-/*
-    Fetching multible entries
-*/
+// Fetching multiple entries
 $users = User::table()
-    ->like("description", "")
+    ->like("description", "I am%")
     ->get();
 
 foreach ($users as $user) {
     echo $user->name;
 }
 
-
-/*
-    Updating
-*/
+// Updating
 User::table()
     ->where("id", 2)
     ->update();
@@ -93,10 +85,7 @@ $user = User::table()->where("id", "1")->first();
 $user->name = "ninel";
 $user->save();
 
-/*
-    Deleting
-*/
-
+// Deleting
 User::table()
     ->where("id", 2)
     ->delete();
@@ -104,6 +93,35 @@ User::table()
 // Deleting entry
 $user = User::table()->where("id", "1")->first();
 $user->delete();
+
+// Where
+User::table()->where("name", "John")->get();
+User::table()->whereRaw("`name`", "=", "?", ["John"])->get();
+User::table()->in("country", ["Germany", "France"])->get();
+User::table()->notIn("country", ["Germany", "France"])->get();
+
+User::table()->isNull("country")->get();
+User::table()->notNull("country")->get();
+
+User::table()->whereDay("createdAt", "23")->get();
+User::table()->whereMonth("createdAt", "5")->get();
+User::table()->whereYear("createdAt", "2022")->get();
+User::table()->whereDate("createdAt", "23-5-2022")->get();
+User::table()->whereTime("createdAt", "16:22:43")->get();
+
+// Where Exists
+$postsOfAUser = UserPost::table()
+    ->whereExists(User::class, fn(Query $q) => $q->whereColumns(UserPost::class, "userId", "=", User::class, "id"))
+    ->all()
+    
+// Helpful
+User::table()->count();
+User::table()->sum("balance");
+User::table()->sub("balance");
+User::table()->avg("balance");
+User::table()->max("balance");
+User::table()->min("balance");
+
 ```
 
 ## Selection
@@ -166,11 +184,6 @@ User::table()->each(function(User $entry){
     ->fromFolder("resources/migrations")
     ->down(/*default val: 1*/);
 ```
-## Auto-Migrate
-```php
-// Automatically migrates all columns by its class structure and attributes
-UloleORM::autoMigrate();
-```
 
 #### resources/migrations/migration_22_0_11_create_users.php
 ```php
@@ -229,4 +242,13 @@ class migration_22_0_13_edit_users implements Migration {
         });
     }
 }
+```
+
+## Auto-Migrate
+```php
+// Automatically migrates all columns by its class structure and attributes
+UloleORM::autoMigrate();
+
+// Or for a specific database:
+UloleORM::getDatabase("main")->autoMigrate();
 ```

@@ -1,4 +1,5 @@
 <?php
+
 namespace de\interaapps\ulole\orm\migration;
 
 class Column {
@@ -24,7 +25,7 @@ class Column {
 
         if (($type == 'ENUM' || $type == 'SET')) {
             // if (!is_array($size))
-                
+
             $comma = false;
             $this->size = "";
             foreach ($size as $key) {
@@ -32,61 +33,61 @@ class Column {
                     $this->size .= ", ";
                 else
                     $comma = true;
-                $this->size .= "'".$key."'";
+                $this->size .= "'" . $key . "'";
             }
         }
     }
 
-    public function currentTimestamp(){
+    public function currentTimestamp() {
         return $this->default("CURRENT_TIMESTAMP", false);
     }
 
-    public function ai($ai = true){
+    public function ai($ai = true) {
         $this->ai = $ai;
         $this->primary = true;
         return $this;
     }
 
-    public function unqiue($unique = true){
+    public function unqiue($unique = true) {
         $this->unique = $unique;
         return $this;
     }
 
-    public function rename($rename){
+    public function rename($rename) {
         $this->renameTo = $rename;
         return $this;
     }
 
-    public function drop(){
+    public function drop() {
         $this->drop = true;
     }
 
-    public function primary($primary = true){
+    public function primary($primary = true) {
         $this->primary = $primary;
         return $this;
     }
 
-    public function default($value, $escape=true){
+    public function default($value, $escape = true) {
         $this->defaultDefined = true;
         $this->default = $value;
         $this->escapeDefault = $escape;
         return $this;
     }
 
-    public function nullable(bool $nullable = true) : Column {
+    public function nullable(bool $nullable = true): Column {
         $this->nullable = $nullable;
         return $this;
     }
 
-    public function generateStructure() : string {
+    public function generateStructure(): string {
         if ($this->drop)
-            return "DROP COLUMN `".$this->name."`";
+            return "DROP COLUMN `" . $this->name . "`";
         $structure = "`"
-                        .($this->renameTo === null ? $this->name : $this->renameTo)
-                        ."` "
-                        .$this->type;
+            . ($this->renameTo === null ? $this->name : $this->renameTo)
+            . "` "
+            . $this->type;
         if ($this->size !== null)
-            $structure .= "(".$this->size.")";
+            $structure .= "(" . $this->size . ")";
         $structure .= " ";
         if ($this->defaultDefined) {
             $structure .= "DEFAULT ";
@@ -95,7 +96,7 @@ class Column {
             } else if (!$this->escapeDefault) {
                 $structure .= $this->default;
             } else {
-                $structure .= "'".addslashes($this->default)."'";
+                $structure .= "'" . addslashes($this->default) . "'";
             }
             $structure .= " ";
         }

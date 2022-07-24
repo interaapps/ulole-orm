@@ -23,8 +23,7 @@ class ModelInformation {
      */
     public function __construct(
         private string $class
-    )
-    {
+    ) {
         $reflection = new ReflectionClass($this->class);
 
         $tableAttributes = $reflection->getAttributes(Table::class);
@@ -43,7 +42,7 @@ class ModelInformation {
                 $columnAttributes = $property->getAttributes(Column::class);
                 if (count($columnAttributes) > 0) {
                     $columnAttribute = $columnAttributes[0]->newInstance();
-                    $this->fields[$property->getName()] = new ColumnInformation($columnAttribute->name ?? $property->getName(), $columnAttribute, $property);
+                    $this->fields[$property->getName()] = new ColumnInformation($columnAttribute->name ?? strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property->getName())), $columnAttribute, $property);
                 }
             }
         }
@@ -77,21 +76,21 @@ class ModelInformation {
         return $this;
     }
 
-    public function getFieldName(string $field) : string {
+    public function getFieldName(string $field): string {
         return $this->getColumnInformation($field)->getFieldName();
     }
 
-    public function getColumnInformation(string $name) : ColumnInformation {
+    public function getColumnInformation(string $name): ColumnInformation {
         return $this->fields[$name];
     }
 
-    public function getFieldValue($obj, string $field) : string {
+    public function getFieldValue($obj, string $field): string {
 
 
         return $obj->{$this->getFieldName($field)};
     }
 
-    public function getIdentifierValue($obj) : string {
+    public function getIdentifierValue($obj): string {
         return $obj->{$this->getIdentifier()};
     }
 }

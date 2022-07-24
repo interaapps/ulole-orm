@@ -1,4 +1,5 @@
 <?php
+
 namespace de\interaapps\ulole\orm\migration\table;
 
 use de\interaapps\ulole\orm\ORMModel;
