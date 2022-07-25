@@ -1,4 +1,5 @@
 <?php
+
 namespace de\interaapps\ulole\orm\helper;
 
 class MySQLOperator {

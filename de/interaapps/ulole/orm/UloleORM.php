@@ -75,7 +75,7 @@ class UloleORM {
      */
     public static function getModelInformation($model): ModelInformation {
         if (!isset(self::$modelInformation[$model]))
-            throw new \Exception("Register the model first with UloleORM::register(".$model."::class);");
+            throw new \Exception("Register the model first with UloleORM::register(" . $model . "::class);");
         return self::$modelInformation[$model];
     }
 

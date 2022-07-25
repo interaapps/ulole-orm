@@ -3,7 +3,11 @@
 namespace de\interaapps\ulole\orm;
 
 use de\interaapps\ulole\orm\attributes\Column;
+use de\interaapps\ulole\orm\attributes\CreatedAt;
+use de\interaapps\ulole\orm\attributes\DeletedAt;
+use de\interaapps\ulole\orm\attributes\Identifier;
 use de\interaapps\ulole\orm\attributes\Table;
+use de\interaapps\ulole\orm\attributes\UpdatedAt;
 use ReflectionClass;
 use ReflectionException;
 
@@ -16,8 +20,12 @@ class ModelInformation {
      * @var ColumnInformation[]
      */
     private array $fields;
-    private ?string $name;
+    private ?string $name = null;
     private bool $disableAutoMigrate = false;
+
+    private ?string $createdAt = null;
+    private ?string $updatedAt = null;
+    private ?string $deletedAt = null;
 
     private const PHP_SQL_TYPES = [
         "int" => "INTEGER",
@@ -38,9 +46,10 @@ class ModelInformation {
 
         if (count($tableAttributes) > 0) {
             $tableAttribute = $tableAttributes[0]->newInstance();
-            $this->name = $tableAttribute->value;
+            $this->name = $tableAttribute->name;
             $this->disableAutoMigrate = $tableAttribute->disableAutoMigrate;
-        } else {
+        }
+        if ($this->name === null) {
             $this->name = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $reflection->getShortName()));
             if (!str_ends_with($this->name, "s"))
                 $this->name .= "s";
@@ -51,7 +60,21 @@ class ModelInformation {
                 $columnAttributes = $property->getAttributes(Column::class);
                 if (count($columnAttributes) > 0) {
                     $columnAttribute = $columnAttributes[0]->newInstance();
-                    $this->fields[$property->getName()] = new ColumnInformation($columnAttribute->name ?? strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property->getName())), $columnAttribute, $property);
+                    $columnInfo = new ColumnInformation($columnAttribute->name ?? strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $property->getName())), $columnAttribute, $property);
+
+                    $this->fields[$property->getName()] = $columnInfo;
+
+                    if ($columnAttribute->id)
+                        $this->identifier = $property->getName();
+
+                    if (count($property->getAttributes(CreatedAt::class)))
+                        $this->createdAt = $property->getName();
+
+                    if (count($property->getAttributes(UpdatedAt::class)))
+                        $this->updatedAt = $property->getName();
+
+                    if (count($property->getAttributes(DeletedAt::class)))
+                        $this->deletedAt = $property->getName();
                 }
             }
         }
@@ -94,8 +117,6 @@ class ModelInformation {
     }
 
     public function getFieldValue($obj, string $field): string {
-
-
         return $obj->{$this->getFieldName($field)};
     }
 
@@ -106,11 +127,11 @@ class ModelInformation {
     public function isAutoMigrateDisabled(): bool {
         return $this->disableAutoMigrate;
     }
-    
-    public function autoMigrate(array|null $databases = null) : ModelInformation {
+
+    public function autoMigrate(array|null $databases = null): ModelInformation {
         if ($databases === null)
             $databases = UloleORM::getDatabases();
-        
+
         foreach ($databases as $database) {
             $tables = [];
             foreach ($database->query("SHOW TABLES;")->fetchAll() as $r) {
@@ -138,7 +159,8 @@ class ModelInformation {
                     "identifier" => $isIdentifier,
                     "query" => "`" . $field->getFieldName() . "` "
                         . $type
-                        . ($field->getType()->allowsNull() ? '' : ' NOT NULL')
+                        . ($field->getType()->allowsNull() ? ' NULL' : ' NOT NULL')
+                        . ($field->getColumnAttribute()->unique ? ' UNIQUE' : '')
                         . ($type == 'INTEGER' && $isIdentifier ? ' AUTO_INCREMENT' : '')
                 ];
             }, $fields);
@@ -182,7 +204,19 @@ class ModelInformation {
             }
         }
 
-        
+
         return $this;
+    }
+
+    public function getCreatedAt(): ?string {
+        return $this->createdAt;
+    }
+
+    public function getDeletedAt(): ?string {
+        return $this->deletedAt;
+    }
+
+    public function getUpdatedAt(): ?string {
+        return $this->updatedAt;
     }
 }

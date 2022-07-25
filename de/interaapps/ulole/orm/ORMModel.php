@@ -25,7 +25,7 @@ trait ORMModel {
                 if (isset($this->{$fieldName}))
                     $query->set($modelInformation->getFieldName(), $this->{$fieldName});
             }
-            return $query->where(UloleORM::getModelInformation(static::class)->getIdentifier(), UloleORM::getModelInformation(static::class)->getIdentifierValue($this))->update() !== false;
+            return $query->whereId(UloleORM::getModelInformation(static::class)->getIdentifierValue($this))->update();
         } else {
             return $this->insert($database);
         }
@@ -34,9 +34,17 @@ trait ORMModel {
     public function insert(string $database = 'main'): bool {
         $fields = [];
         $values = [];
-        foreach (UloleORM::getModelInformation(static::class)->getFields() as $fieldName => $modelInformation) {
+        $modelInfo = UloleORM::getModelInformation(static::class);
+
+        $createdAt = $modelInfo->getUpdatedAt();
+        if ($createdAt !== null && !isset($this->createdAt)) {
+            $fields[] = $modelInfo->getFieldName($createdAt);
+            $values[] = date("Y-m-d H:i:s");
+        }
+
+        foreach ($modelInfo->getFields() as $fieldName => $columnInformation) {
             if (isset($this->{$fieldName})) {
-                $fields[] = $modelInformation->getFieldName();
+                $fields[] = $columnInformation->getFieldName();
                 $values[] = $this->{$fieldName};
             }
         }
@@ -63,7 +71,7 @@ trait ORMModel {
 
     public function delete(string $database = 'main'): bool {
         return self::table($database)
-            ->where(UloleORM::getModelInformation(static::class)->getIdentifier(), UloleORM::getModelInformation(static::class)->getIdentifierValue($this))
+            ->whereId(UloleORM::getModelInformation(static::class)->getIdentifierValue($this))
             ->delete();
     }
 

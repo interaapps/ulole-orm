@@ -35,6 +35,18 @@ class User {
     
     #[Column]
     public ?string $description;
+    
+    #[Column(sqlType: "TIMESTAMP")]
+    #[CreatedAt]
+    public ?string $createdAt;
+
+    #[Column(sqlType: "TIMESTAMP")]
+    #[UpdatedAt]
+    public ?string $updatedAt;
+
+    #[Column(sqlType: "TIMESTAMP")]
+    #[DeletedAt]
+    public ?string $deletedAt;
 }
 ```
 ### example.php
