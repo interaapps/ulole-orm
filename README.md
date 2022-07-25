@@ -36,6 +36,8 @@ class User {
     #[Column]
     public ?string $description;
     
+    
+    // CreatedAt, UpdatedAt and DeletedAt will automatically fill the columns
     #[Column(sqlType: "TIMESTAMP")]
     #[CreatedAt]
     public ?string $createdAt;
