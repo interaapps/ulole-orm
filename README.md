@@ -46,8 +46,7 @@ class User {
     #[UpdatedAt]
     public ?string $updatedAt;
 
-    #[Column(sqlType: "TIMESTAMP")]
-    #[DeletedAt]
+    #[Column(sqlType: "TIMESTAMP"), DeletedAt] // More dirty syntax of multiple attributes
     public ?string $deletedAt;
 }
 ```
