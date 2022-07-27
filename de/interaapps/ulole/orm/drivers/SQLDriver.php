@@ -196,7 +196,7 @@ abstract class SQLDriver implements Driver {
                         $out->vars = array_merge($out->vars, $query['vals']);
                 } else if (isset($query["queries"])) {
                     $out->query .= ' (';
-                    $where = ($query["queries"])->buildQuery();
+                    $where = $this->createQuery(($query["queries"]));
                     $out->vars = array_merge($out->vars, $where->vars);
                     $out->query .= $where->query;
                     $out->query .= ') ';
