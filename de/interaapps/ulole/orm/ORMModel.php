@@ -49,24 +49,14 @@ trait ORMModel {
             }
         }
 
-        $query = 'INSERT INTO `' . UloleORM::getTableName(static::class) . '` (';
+        $insertion = UloleORM::getDatabase($database)->getDriver()->insert(UloleORM::getTableName(static::class), $fields, $values);
 
-        foreach ($fields as $i => $field)
-            $query .= ($i == 0 ? '' : ', ') . '`' . $field . '`';
+        if ($insertion === false)
+            return false;
 
-        $query .= ') VALUES (';
-
-        foreach ($values as $i => $value)
-            $query .= ($i == 0 ? '' : ', ') . '?';
-        $query .= ')';
-
-        $statement = UloleORM::getDatabase($database)->getConnection()->prepare($query);
-
-        $result = $statement->execute($values);
-        $this->{UloleORM::getModelInformation(static::class)->getIdentifier()} = UloleORM::getDatabase($database)->getConnection()->lastInsertId();
-        if ($result)
-            $this->ormInternals_entryExists = true;
-        return $result;
+        $this->{UloleORM::getModelInformation(static::class)->getIdentifier()} = $insertion;
+        $this->ormInternals_entryExists = true;
+        return true;
     }
 
     public function delete(string $database = 'main'): bool {

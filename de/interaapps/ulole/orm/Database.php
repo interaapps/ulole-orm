@@ -2,12 +2,18 @@
 
 namespace de\interaapps\ulole\orm;
 
+use de\interaapps\ulole\orm\drivers\Driver;
+use de\interaapps\ulole\orm\drivers\MySQLDriver;
+use de\interaapps\ulole\orm\drivers\PostgresDriver;
+use de\interaapps\ulole\orm\drivers\SQLiteDriver;
 use de\interaapps\ulole\orm\migration\Blueprint;
 use PDO;
 use PDOStatement;
 
 class Database {
-    private PDO $connection;
+    private Driver $driver;
+
+    private static $driverFactories = [];
 
     /**
      * @param string $username
@@ -17,61 +23,20 @@ class Database {
      * @param int $port
      * @param string $driver
      */
-    public function __construct(string $username, string|null $password = null, string|null $database = null, string $host = 'localhost', int $port = 3306, string $driver = "mysql") {
-        if ($driver == "sqlite")
-            $this->connection = new PDO($driver . ':' . $database);
-        else
-            $this->connection = new PDO($driver . ':host=' . $host . ';dbname=' . $database, $username, $password);
+    public function __construct(string $username = "", string|null $password = null, string|null $database = null, string $host = 'localhost', int|null $port = null, string $driver = "mysql") {
+        $this->driver = self::getDriverFactories()[$driver]($username, $password, $database, $host, $port, $driver);
     }
 
-    public function getConnection(): PDO {
-        return $this->connection;
+    public function create(string $name, callable $callable, bool $ifNotExists = false): bool {
+        return $this->driver->create($name, $callable);
     }
 
-    public function query($sql): PDOStatement|bool {
-        return $this->connection->query($sql);
+    public function edit(string $name, callable $callable): bool {
+        return $this->driver->edit($name, $callable);
     }
-
-    public function create(string $name, $callable, bool $ifNotExists = false): PDOStatement|bool {
-        $blueprint = new Blueprint();
-        $callable($blueprint);
-        $sql = "CREATE TABLE " . ($ifNotExists ? "IF NOT EXISTS " : "") . "`" . $name . "` (\n";
-        $sql .= implode(",\n", $blueprint->getQueries(true));
-        $sql .= "\n) ENGINE = InnoDB;";
-
-        return $this->query($sql);
-    }
-
-    public function edit(string $name, $callable): PDOStatement|bool {
-        $statement = $this->connection->query("SHOW COLUMNS FROM " . $name . ";");
-        $existingColumns = [];
-        foreach ($statement->fetchAll(\PDO::FETCH_NUM) as $row) {
-            $existingColumns[] = $row[0];
-        }
-        $blueprint = new Blueprint();
-        $callable($blueprint);
-        $sql = "ALTER TABLE `" . $name . "`";
-        $comma = false;
-        foreach ($blueprint->getQueries() as $column => $query) {
-            if ($comma)
-                $sql .= ", ";
-
-            if (in_array($column, $existingColumns))
-                $sql .= (substr($query, 0, 4) === "DROP" ? "" : "CHANGE `" . $column . "` ") . $query;
-            else
-                $sql .= " ADD " . $query;
-
-            if (!$comma)
-                $comma = true;
-        }
-        $sql .= ";";
-
-        return $this->query($sql);
-    }
-
 
     public function drop(string $name): PDOStatement|bool {
-        return $this->query("DROP TABLE `" . $name . "`;");
+        return $this->driver->drop($name);
     }
 
     public function autoMigrate(): Database {
@@ -85,4 +50,27 @@ class Database {
         return $this;
     }
 
+    public function getDriver(): Driver {
+        return $this->driver;
+    }
+
+    public static function setDriverFactory(string $name, callable $callable) {
+        self::$driverFactories[$name] = $callable;
+    }
+
+    public static function getDriverFactories(): array {
+        return self::$driverFactories;
+    }
 }
+
+Database::setDriverFactory("mysql", function (string $username, string|null $password, string|null $database, string $host, int|null $port, string $driver) : Driver {
+    return new MySQLDriver(new PDO($driver . ':host=' . $host. ':' . ($port ?? 3306) . ';dbname=' . $database, $username, $password));
+});
+
+Database::setDriverFactory("pgsql", function (string $username, string|null $password, string|null $database, string $host, int|null $port, string $driver) : Driver {
+    return new PostgresDriver(new PDO($driver . ':host=' . $host . ';dbname=' . $database, $username, $password));
+});
+
+Database::setDriverFactory("sqlite", function (string $username, string|null $password, string|null $database, string $host, int|null $port, string $driver) : Driver {
+    return new SQLiteDriver(new PDO($driver . ':' . $database));
+});

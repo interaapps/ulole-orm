@@ -1,4 +1,4 @@
-# Ulole-ORM `3.1`
+# Ulole-ORM `3.2`
 
 ## Getting started
 UloleORM is an Object Relation Mapper written in PHP.
@@ -54,12 +54,12 @@ class User {
 ```php
 <?php
 UloleORM::database("main", new Database(
-    'username', 
-    'password', 
-    'database', 
-    'host',  /* PORT: default localhost */
-    3306, /* PORT: default 3306 */
-    'mysql' /* DRIVER: default mysql (Every PDO Driver usable. ) */
+    username: 'root',
+    password: '1234',
+    database: 'testing',
+    host: 'localhost',
+    port: 3306,
+    driver: 'mysql' // You can also use sqlite for testing or pgsql for postgres
 ));
 
 UloleORM::register(User::class);

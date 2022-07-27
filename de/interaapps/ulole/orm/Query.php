@@ -21,7 +21,6 @@ class Query {
     private ModelInformation $modelInformation;
 
     /**
-     * @param Database $database
      * @param class-string<T> $model
      */
     public function __construct(Database $database, string $model) {
@@ -50,11 +49,11 @@ class Query {
             $operator = '=';
         } else
             $value = $var3;
-        return $this->whereRaw('`' . $this->modelInformation->getFieldName($field) . '`', $operator, '?', [$value]);
+        return $this->whereRaw($this->modelInformation->getFieldName($field), $operator, '?', [$value]);
     }
 
     public function whereId($id): Query {
-        $this->whereRaw("`" . $this->modelInformation->getIdentifier() . "`", "=", "?", [$id]);
+        $this->whereRaw($this->modelInformation->getIdentifier(), "=", "?", [$id]);
         return $this;
     }
 
@@ -84,12 +83,12 @@ class Query {
     }
 
     public function isNull(string $field): Query {
-        $this->whereRaw('`' . $this->modelInformation->getFieldName($field) . '`', "IS", "NULL");
+        $this->whereRaw($this->modelInformation->getFieldName($field), "IS", "NULL");
         return $this;
     }
 
     public function notNull(string $field): Query {
-        $this->whereRaw('`' . $this->modelInformation->getFieldName($field) . '`', "IS", "NOT NULL");
+        $this->whereRaw($this->modelInformation->getFieldName($field), "IS", "NOT NULL");
         return $this;
     }
 
@@ -102,9 +101,9 @@ class Query {
         $this->queries[] = [
             'type' => 'AND',
             'query' =>
-                UloleORM::getTableName($field1Table) . '.`' . UloleORM::getModelInformation($field1Table)->getFieldName($field1Name) . '` '
+                UloleORM::getTableName($field1Table) . '.' . UloleORM::getModelInformation($field1Table)->getFieldName($field1Name) . '` '
                 . $operator . ' '
-                . UloleORM::getTableName($field2Table) . '.`' . UloleORM::getModelInformation($field2Table)->getFieldName($field2Name) . '`'];
+                . UloleORM::getTableName($field2Table) . '.' . UloleORM::getModelInformation($field2Table)->getFieldName($field2Name)];
         return $this;
     }
 
@@ -137,12 +136,12 @@ class Query {
     }
 
     public function notBetween(string $field, mixed $val1, mixed $val2): Query {
-        $this->queries[] = ['type' => 'AND', 'query' => '`' . $this->modelInformation->getFieldName($field) . '` NOT BETWEEN ? AND ?', 'vals' => [$val1, $val2]];
+        $this->queries[] = ['type' => 'AND', 'query' => $this->modelInformation->getFieldName($field) . '` NOT BETWEEN ? AND ?', 'vals' => [$val1, $val2]];
         return $this;
     }
 
     public function between(string $field, mixed $val1, mixed $val2): Query {
-        $this->queries[] = ['type' => 'AND', 'query' => '`' . $this->modelInformation->getFieldName($field) . '` BETWEEN ? AND ?', 'vals' => [$val1, $val2]];
+        $this->queries[] = ['type' => 'AND', 'query' => $this->modelInformation->getFieldName($field) . '` BETWEEN ? AND ?', 'vals' => [$val1, $val2]];
         return $this;
     }
 
@@ -187,7 +186,7 @@ class Query {
         $query = new Query($this->database, $table);
 
         $callable($query);
-        $this->queries[] = ['type' => 'WHERE_EXISTS', 'query' => 'SELECT * FROM `' . UloleORM::getTableName($table) . '`' . $query->buildQuery()->query];
+        $this->queries[] = ['type' => 'WHERE_EXISTS', 'query' => 'SELECT * FROM `' . UloleORM::getTableName($table) . $query->buildQuery()->query];
 
         return $this;
     }
@@ -196,7 +195,7 @@ class Query {
      * @throws Null
      */
     public function in(string $field, callable|array $var, string|null $table = null): Query {
-        $query = ['type' => 'WHERE_IN', "column" => '`' . $this->modelInformation->getFieldName($field) . '`', "not" => false];
+        $query = ['type' => 'WHERE_IN', "column" => $this->modelInformation->getFieldName($field), "not" => false];
         if (is_array($var)) {
             $query["query"] = implode(",", array_map(fn() => "?", $var));
             $query["vars"] = $var;
@@ -206,7 +205,7 @@ class Query {
             $query = new Query($this->database, $table);
 
             $var($query);
-            $query["query"] = 'SELECT * FROM `' . UloleORM::getTableName($table) . '`' . $query->buildQuery()->query;
+            $query["query"] = 'SELECT * FROM `' . UloleORM::getTableName($table) . $query->buildQuery()->query;
         }
         $this->queries[] = $query;
 
@@ -227,7 +226,7 @@ class Query {
         $query = new Query($this->database, $table);
 
         $callable($query);
-        $this->queries[] = ['type' => 'WHERE_NOT_EXISTS', 'query' => 'SELECT * FROM `' . UloleORM::getTableName($table) . '`' . $query->buildQuery()->query];
+        $this->queries[] = ['type' => 'WHERE_NOT_EXISTS', 'query' => 'SELECT * FROM `' . UloleORM::getTableName($table) . $query->buildQuery()->query];
 
         return $this;
     }
@@ -236,7 +235,7 @@ class Query {
      * @return $this
      */
     public function set($field, $value): Query {
-        $this->queries[] = ['type' => 'SET', 'query' => '`' . $this->modelInformation->getFieldName($field) . '` = ?', 'val' => $value];
+        $this->queries[] = ['type' => 'SET', 'query' => $this->modelInformation->getFieldName($field) . ' = ?', 'val' => $value];
         return $this;
     }
 
@@ -254,21 +253,7 @@ class Query {
      * @return T[]
      */
     public function all(): array {
-        $vars = [];
-
-        $query = $this->buildQuery();
-        $vars = array_merge($vars, $query->vars);
-
-        $statement = $this->run('SELECT * FROM ' . UloleORM::getTableName($this->model) . $query->query . ';', $vars);
-        $result = $statement->fetchAll();
-        foreach ($result as $entry) {
-            $entry->ormInternals_setEntryExists();
-            foreach ($this->modelInformation->getFields() as $name => $colInfo) {
-                if (isset($entry->{$colInfo->getFieldName()}))
-                    $entry->{$name} = $entry->{$colInfo->getFieldName()};
-            }
-        }
-        return $result;
+        return $this->database->getDriver()->get($this->model, $this);
     }
 
     /**
@@ -287,7 +272,7 @@ class Query {
         return $this;
     }
 
-    private function selectNumber(string $f): int|float {
+    private function selectNumber(string $f, string $field): int|float {
         $vars = [];
         $query = $this->buildQuery();
         $vars = array_merge($vars, $query->vars);
@@ -301,133 +286,46 @@ class Query {
     }
 
     public function count(): int {
-        return $this->selectNumber("COUNT(*)");
+        return $this->database->getDriver()->count($this->model, $this);
     }
 
     public function sum(string $field): float|int {
-        return $this->selectNumber("SUM(`" . $this->modelInformation->getFieldName($field) . "`)");
+        return $this->database->getDriver()->sum($this->model, $this, $this->modelInformation->getFieldName($field));
     }
 
     public function sub(string $field): float|int {
-        return $this->selectNumber("SUM(-`" . $this->modelInformation->getFieldName($field) . "`)");
+        return $this->database->getDriver()->sub($this->model, $this, $this->modelInformation->getFieldName($field));
     }
 
     public function avg(string $field): float|int {
-        return $this->selectNumber("AVG(`" . $this->modelInformation->getFieldName($field) . "`)");
+        return $this->database->getDriver()->avg($this->model, $this, $this->modelInformation->getFieldName($field));
     }
 
     public function min(string $field): float|int {
-        return $this->selectNumber("MIN(`" . $this->modelInformation->getFieldName($field) . "`)");
+        return $this->database->getDriver()->min($this->model, $this, $this->modelInformation->getFieldName($field));
     }
 
     public function max(string $field): float|int {
-        return $this->selectNumber("MAX(`" . $this->modelInformation->getFieldName($field) . "`)");
+        return $this->database->getDriver()->max($this->model, $this, $this->modelInformation->getFieldName($field));
     }
 
     public function update(): bool {
-        $vars = [];
-
         $updatedAt = $this->modelInformation->getUpdatedAt();
         if ($updatedAt !== null) {
             $this->set($updatedAt, date("Y-m-d H:i:s"));
         }
 
-        $query = $this->buildQuery();
-        $vars = array_merge($vars, $query->vars);
-
-        return $this->run('UPDATE `' . UloleORM::getTableName($this->model) . '`' . $query->query . ';', $vars, true) !== false;
+        return $this->database->getDriver()->update($this->model, $this);
     }
 
     public function delete(): bool {
-        $vars = [];
-        $query = $this->buildQuery();
-        $vars = array_merge($vars, $query->vars);
-
         $deletedAt = $this->modelInformation->getDeletedAt();
         if ($deletedAt !== null)
-            $this->set($this->modelInformation->getFieldName($deletedAt), date("Y-m-d H:i:s"))->update();
+            return $this->set($this->modelInformation->getFieldName($deletedAt), date("Y-m-d H:i:s"))->update();
 
-        return $this->run('DELETE FROM `' . UloleORM::getTableName($this->model) . '`' . $query->query . ';', $vars, true) !== false;
+        return $this->database->getDriver()->delete($this->model, $this);
     }
 
-    public function run(string $query, array $vars = [], bool $returnResult = false): PDOStatement|bool|null {
-        $statement = $this->database->getConnection()->prepare($query);
-
-        $result = $statement->execute($vars);
-        if ($returnResult)
-            return $result;
-        if ($result === false)
-            return null;
-        $statement->setFetchMode(PDO::FETCH_CLASS, $this->model);
-        return $statement;
-    }
-
-    protected function buildQuery(): object {
-        $deletedAt = $this->modelInformation->getDeletedAt();
-        if ($deletedAt !== null && !$this->withDeleted)
-            $this->isNull($this->modelInformation->getFieldName($deletedAt));
-
-        $out = (object)["query" => '', 'vars' => []];
-
-        $usedWhere = $this->temporaryQuery;
-        $usedSet = false;
-        $useCondition = false;
-
-        foreach (array_filter($this->queries, fn($q) => $q["type"] == "SET") as $query) {
-            if (!$usedSet) {
-                $out->query .= " SET ";
-                $usedSet = true;
-            } else
-                $out->query .= ",";
-            $out->query .= ' ' . $query["query"] . ' ';
-            $out->vars[] = $query['val'];
-        }
-
-        foreach ($this->queries as $query) {
-            if ($query["type"] == 'AND' || $query["type"] == 'OR' || $query["type"] == 'NOT') {
-                if (!$usedWhere) {
-                    $out->query .= " WHERE ";
-                    $usedWhere = true;
-                }
-                if ($useCondition || $query["type"] == 'NOT') {
-                    if ($query["type"] == 'NOT') {
-                        if ($useCondition) {
-                            $out->query .= " AND ";
-                        } else
-                            $useCondition = true;
-                    }
-                    $out->query .= $query["type"];
-                } else
-                    $useCondition = true;
-                if (isset($query["query"])) {
-                    $out->query .= ' ' . $query["query"] . ' ';
-                    if (isset($query['val']))
-                        $out->vars[] = $query['val'];
-                    if (isset($query['vals']))
-                        $out->vars = array_merge($out->vars, $query['vals']);
-                } else if (isset($query["queries"])) {
-                    $out->query .= ' (';
-                    $where = ($query["queries"])->buildQuery();
-                    $out->vars = array_merge($out->vars, $where->vars);
-                    $out->query .= $where->query;
-                    $out->query .= ') ';
-                }
-            } else if ($query["type"] == 'WHERE_EXISTS' || $query["type"] == 'WHERE_NOT_EXISTS') {
-                $out->query .= " WHERE " . ($query["type"] == 'WHERE_NOT_EXISTS' ? "NOT " : "") . "EXISTS (" . $query["query"] . ")";
-            } else if ($query["type"] == 'WHERE_IN') {
-                $out->query .= " WHERE " . $query["column"] . ($query["not"] ? " NOT " : ' ') . " IN (" . $query["query"] . ")";
-                $out->vars = $query["vars"];
-            }
-        }
-
-        if ($this->orderBy !== null)
-            $out->query .= ' ORDER BY ' . $this->orderBy["orderBy"] . ' ' . ($this->orderBy["desc"] ? 'DESC ' : ' ');
-
-        if ($this->limit !== null)
-            $out->query .= ' LIMIT ' . $this->limit . ' ' . ($this->offset === null ? '' : 'OFFSET ' . $this->offset) . ' ';
-
-        return $out;
-    }
 
     public function getQueries(): array {
         return $this->queries;
@@ -454,11 +352,37 @@ class Query {
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function offset(int $offset): Query {
         $this->offset = $offset;
         return $this;
     }
+
+    public function isTemporaryQuery(): bool {
+        return $this->temporaryQuery;
+    }
+
+    public function isWithDeleted(): bool {
+        return $this->withDeleted;
+    }
+
+    public function getDatabase(): Database {
+        return $this->database;
+    }
+
+    public function getLimit(): ?int {
+        return $this->limit;
+    }
+
+    public function getModelInformation(): ModelInformation {
+        return $this->modelInformation;
+    }
+
+    public function getOffset(): ?int {
+        return $this->offset;
+    }
+
+    public function getOrderBy(): ?array {
+        return $this->orderBy;
+    }
 }
+

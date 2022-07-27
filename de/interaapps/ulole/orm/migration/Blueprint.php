@@ -3,45 +3,48 @@
 namespace de\interaapps\ulole\orm\migration;
 
 class Blueprint {
+    /**
+     * @var Column[]
+     */
     private array $columns;
 
     public function __construct() {
         $this->columns = [];
     }
 
-    public function custom($name, $type, $size = null): Column {
+    public function custom(string $name, string $type, mixed $size = null): Column {
         $column = new Column($name, $type, $size);
         $this->columns[] = $column;
         return $column;
     }
 
     public function id($name = "id"): Column {
-        $column = (new Column($name, "INT"))
+        $column = $this->int($name)
             ->ai();
         $this->columns[] = $column;
         return $column;
     }
 
     public function string($name, $size = null): Column {
-        $column = new Column($name, $size === null ? "TEXT" : "VARCHAR");
+        $column = $this->custom($name, $size === null ? "TEXT" : "VARCHAR");
         $this->columns[] = $column;
         return $column;
     }
 
     public function int($name, $size = null): Column {
-        $column = new Column($name, "INT", $size);
+        $column = $this->custom($name, "INTEGER", $size);
         $this->columns[] = $column;
         return $column;
     }
 
     public function text($name): Column {
-        $column = new Column($name, "TEXT");
+        $column = $this->custom($name, "TEXT");
         $this->columns[] = $column;
         return $column;
     }
 
     public function varChar($name, $size = null): Column {
-        $column = new Column($name, "VARCHAR", $size);
+        $column = $this->custom($name, "VARCHAR", $size);
         $this->columns[] = $column;
         return $column;
     }
@@ -91,38 +94,34 @@ class Blueprint {
     }
 
     public function enum($name, array $set): Column {
-        $column = new Column($name, "ENUM", $set);
+        $column = $this->custom($name, "ENUM", $set);
         $this->columns[] = $column;
         return $column;
     }
 
     public function set($name, array $set): Column {
-        $column = new Column($name, "ENUM", $set);
+        $column = $this->custom($name, "ENUM", $set);
         $this->columns[] = $column;
         return $column;
     }
 
     public function timestamp($name): Column {
-        $column = new Column($name, "TIMESTAMP");
+        $column = $this->custom($name, "TIMESTAMP");
         $this->columns[] = $column;
         return $column;
     }
 
+    /**
+     * @return Column[]
+     */
     public function getColumns(): array {
         return $this->columns;
     }
 
-    public function getQueries($addKeys = false): array {
-        $columns = [];
-        $primaryKeys = [];
-        foreach ($this->columns as $column) {
-            $columns[$column->getName()] = $column->generateStructure();
-            if ($column->isPrimary())
-                $primaryKeys[] = "`" . ($column->getRenameTo() === null ? $column->getName() : $column->getRenameTo()) . "`";
-        }
-        if ($addKeys)
-            $columns[":primary_key"] = "PRIMARY KEY (" . implode(",", $primaryKeys) . ")";
-
-        return $columns;
+    /**
+     * @return Column[]
+     */
+    public function getIndexes(): array {
+        return array_filter($this->columns, fn(Column $col) => $col->isIndex());
     }
 }

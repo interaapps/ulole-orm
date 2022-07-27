@@ -8,6 +8,7 @@ use de\interaapps\ulole\orm\attributes\DeletedAt;
 use de\interaapps\ulole\orm\attributes\Identifier;
 use de\interaapps\ulole\orm\attributes\Table;
 use de\interaapps\ulole\orm\attributes\UpdatedAt;
+use de\interaapps\ulole\orm\migration\Blueprint;
 use ReflectionClass;
 use ReflectionException;
 
@@ -31,7 +32,7 @@ class ModelInformation {
         "int" => "INTEGER",
         "float" => "FLOAT",
         "string" => "TEXT",
-        "bool" => "TINYINT"
+        "bool" => "BOOL"
     ];
 
     /**
@@ -133,22 +134,19 @@ class ModelInformation {
             $databases = UloleORM::getDatabases();
 
         foreach ($databases as $database) {
-            $tables = [];
-            foreach ($database->query("SHOW TABLES;")->fetchAll() as $r) {
-                $tables[] = $r[0];
-            }
+            $tables = $database->getDriver()->getTables();
 
             $fields = $this->getFields();
 
             $columns = array_map(function ($field) {
                 $type = $field->getColumnAttribute()->sqlType;
                 if ($type == null) {
-                    if (isset(self::PHP_SQL_TYPES[$field->getType()->getName()]))
+                    if (isset(self::PHP_SQL_TYPES[$field->getType()->getName()])) {
                         $type = self::PHP_SQL_TYPES[$field->getType()->getName()];
+                        if ($type == "TEXT" && $field->getColumnAttribute()->size !== null)
+                            $type = "VARCHAR";
+                    }
                 }
-
-                if ($field->getColumnAttribute()->size != null)
-                    $type .= "(" . $field->getColumnAttribute()->size . ")";
 
                 $isIdentifier = $this->getIdentifier() == $field->getFieldName();
 
@@ -157,50 +155,30 @@ class ModelInformation {
                     "type" => $type,
                     "hasIndex" => $field->getColumnAttribute()->index,
                     "identifier" => $isIdentifier,
-                    "query" => "`" . $field->getFieldName() . "` "
-                        . $type
-                        . ($field->getType()->allowsNull() ? ' NULL' : ' NOT NULL')
-                        . ($field->getColumnAttribute()->unique ? ' UNIQUE' : '')
-                        . ($type == 'INTEGER' && $isIdentifier ? ' AUTO_INCREMENT' : '')
+                    "blueprintHandler" => function (Blueprint $blueprint) use ($isIdentifier, $type, $field) {
+                        $col = $blueprint->custom($field->getFieldName(), $type, $field->getColumnAttribute()->size);
+
+                        if ($type == "INTEGER" && $isIdentifier)
+                            $col->ai()->primary();
+
+                        if ($field->getColumnAttribute()->unique)
+                            $col->unqiue();
+
+                        $col->nullable($field->getType()->allowsNull());
+                    }
                 ];
             }, $fields);
 
-            $indexes = array_filter($columns, fn($c) => $c["hasIndex"]);
-
             if (in_array($this->getName(), $tables)) {
-                $existingFields = array_map(fn($f) => $f[0], $database->query('SHOW COLUMNS FROM ' . $this->getName() . ';')->fetchAll());
-                $existingIndexes = array_map(fn($f) => $f[4], $database->query('SHOW INDEXES FROM ' . $this->getName() . ';')->fetchAll());
-
-                $q = "ALTER TABLE `" . $this->getName() . "` ";
-                $changes = [];
-                foreach ($columns as $column) {
-                    if (in_array($column['field'], $existingFields)) {
-                        $changes[] = "MODIFY COLUMN " . $column["query"];
-                    } else {
-                        $changes[] = "ADD " . $column["query"];
-                    }
-                }
-                foreach ($indexes as $index) {
-                    $index = $index["field"];
-                    if (!in_array($index, $existingIndexes))
-                        $changes[] = 'ADD INDEX (`' . $index . '`);';
-                }
-
-                $q .= implode(", ", $changes) . ';';
-                $database->query($q);
+                $database->edit($this->getName(), function (Blueprint $blueprint) use ($columns) {
+                    foreach ($columns as $column)
+                        $column["blueprintHandler"]($blueprint);
+                });
             } else {
-                $q = "CREATE TABLE " . $this->getName() . " (" .
-                    implode(', ', array_map(fn($c) => $c['query']
-                            . ($c['identifier'] ? ' PRIMARY KEY' : ''
-                            ), $columns)
-                    );
-
-                if (count($indexes) > 0) {
-                    $q .= ", INDEX (" . implode(", ", array_map(fn($c) => $c["field"], $indexes)) . ")";
-                }
-
-                $q .= ");";
-                $database->query($q);
+                $database->create($this->getName(), function (Blueprint $blueprint) use ($columns) {
+                    foreach ($columns as $column)
+                        $column["blueprintHandler"]($blueprint);
+                });
             }
         }
 

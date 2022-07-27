@@ -2,6 +2,8 @@
 
 namespace de\interaapps\ulole\orm\migration;
 
+use de\interaapps\ulole\orm\drivers\Driver;
+
 class Column {
     private string|null $name;
     private string $type;
@@ -11,13 +13,14 @@ class Column {
     private mixed $size; // Can also be value
     private mixed $default;
     private bool $nullable = true;
+    private bool $index = false;
     private string|null $renameTo = null;
     private bool $drop = false;
 
     private bool $defaultDefined = false;
     private bool $escapeDefault = true;
 
-    public function __construct($name, $type, $size = null) {
+    public function __construct(string $name, string $type, mixed $size = null) {
         $this->name = $name;
         $this->type = $type;
 
@@ -38,36 +41,46 @@ class Column {
         }
     }
 
-    public function currentTimestamp() {
+    public function currentTimestamp(): Column {
         return $this->default("CURRENT_TIMESTAMP", false);
     }
 
-    public function ai($ai = true) {
+    public function ai($ai = true): Column {
         $this->ai = $ai;
         $this->primary = true;
         return $this;
     }
 
-    public function unqiue($unique = true) {
+    public function unique($unique = true): Column {
         $this->unique = $unique;
         return $this;
     }
 
-    public function rename($rename) {
+    public function index($index = true): Column {
+        $this->index = $index;
+        return $this;
+    }
+
+    public function setType(string $type): void {
+        $this->type = $type;
+    }
+
+    public function rename($rename): Column {
         $this->renameTo = $rename;
         return $this;
     }
 
-    public function drop() {
+    public function drop(): Column {
         $this->drop = true;
+        return $this;
     }
 
-    public function primary($primary = true) {
+    public function primary($primary = true): Column {
         $this->primary = $primary;
         return $this;
     }
 
-    public function default($value, $escape = true) {
+    public function default($value, $escape = true): Column {
         $this->defaultDefined = true;
         $this->default = $value;
         $this->escapeDefault = $escape;
@@ -77,33 +90,6 @@ class Column {
     public function nullable(bool $nullable = true): Column {
         $this->nullable = $nullable;
         return $this;
-    }
-
-    public function generateStructure(): string {
-        if ($this->drop)
-            return "DROP COLUMN `" . $this->name . "`";
-        $structure = "`"
-            . ($this->renameTo === null ? $this->name : $this->renameTo)
-            . "` "
-            . $this->type;
-        if ($this->size !== null)
-            $structure .= "(" . $this->size . ")";
-        $structure .= " ";
-        if ($this->defaultDefined) {
-            $structure .= "DEFAULT ";
-            if ($this->default === null) {
-                $structure .= "NULL";
-            } else if (!$this->escapeDefault) {
-                $structure .= $this->default;
-            } else {
-                $structure .= "'" . addslashes($this->default) . "'";
-            }
-            $structure .= " ";
-        }
-        $structure .= $this->nullable ? "NULL " : "NOT NULL ";
-        if ($this->ai)
-            $structure .= "AUTO_INCREMENT";
-        return $structure;
     }
 
     public function getName(): ?string {
@@ -136,6 +122,10 @@ class Column {
 
     public function isUnique(): bool {
         return $this->unique;
+    }
+
+    public function isIndex(): bool {
+        return $this->index;
     }
 
     public function getDefault(): mixed {
