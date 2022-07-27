@@ -103,7 +103,7 @@ abstract class SQLDriver implements Driver {
 
         $statement = $this->connection->prepare($query);
 
-        $result = $statement->execute($values);
+        $result = $statement->execute(array_map(fn($f) => is_bool($f) ? ($f ? "true" : "false") : $f, $values));
         if (!$result)
             return false;
 

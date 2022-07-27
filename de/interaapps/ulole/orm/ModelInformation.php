@@ -162,7 +162,7 @@ class ModelInformation {
                             $col->ai()->primary();
 
                         if ($field->getColumnAttribute()->unique)
-                            $col->unqiue();
+                            $col->unique();
 
                         $col->nullable($field->getType()->allowsNull());
                     }

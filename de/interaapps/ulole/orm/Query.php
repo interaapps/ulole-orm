@@ -235,7 +235,7 @@ class Query {
      * @return $this
      */
     public function set($field, $value): Query {
-        $this->queries[] = ['type' => 'SET', 'query' => $this->modelInformation->getFieldName($field) . ' = ?', 'val' => $value];
+        $this->queries[] = ['type' => 'SET', 'query' => $this->modelInformation->getFieldName($field) . ' = ?', 'val' => (is_bool($value) ? ($value ? 'true' : 'false') : $value)];
         return $this;
     }
 
