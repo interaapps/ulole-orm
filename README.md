@@ -185,14 +185,52 @@ User::table()->each(function(User $entry){
 
 ```
 
+## Enums
+```php
+<?php
+enum MyCases {
+    case ALPHA;
+    case BETA;
+}
+
+#[Table('my-model')]
+class MyModel {
+    #[Column]
+    public int $id;
+    
+    #[Column]
+    public MyCases $myCases = MyCases::ALPHA; // Automatically fills the enum in db by its name
+}
+```
+## Relations
+```php
+<?php
+
+#[Table('my-model')]
+class MyModel {
+    #[Column]
+    public int $id;
+    
+    // Automatically fills the id in database
+    #[Column]
+    public ?MySecondModel $second;
+}
+
+#[Table('my-second-model')]
+class MySecondModel {
+    ...
+}
+```
+
 ## Migration
 ```php
-(new Migrator("main"))
+$migrator = new Migrator("main"); 
+$migrator
     ->setLogging(true)
     ->fromFolder("resources/migrations")
     ->up();
 
-(new Migrator("main"))
+$migrator
     ->setLogging(true)
     ->fromFolder("resources/migrations")
     ->down(/*default val: 1*/);
@@ -207,10 +245,7 @@ use de\interaapps\ulole\orm\Database;
 use de\interaapps\ulole\orm\migration\Blueprint;
 use de\interaapps\ulole\orm\migration\Migration;
 
-/**
- * CHANGED: 
- */
-class migration_22_0_11_create_users implements Migration {
+return class implements Migration {
     public function up(Database $database) {
         return $database->create("users", function (Blueprint $blueprint) {
             $blueprint->id();
@@ -240,7 +275,7 @@ use de\interaapps\ulole\orm\migration\Migration;
 /**
  * CHANGED: 
  */
-class migration_22_0_13_edit_users implements Migration {
+return class implements Migration {
     public function up(Database $database) {
         return $database->edit("users", function (Blueprint $blueprint) {
             $blueprint->string("name")->default("Johnson");

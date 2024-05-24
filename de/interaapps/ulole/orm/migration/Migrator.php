@@ -8,7 +8,7 @@ use de\interaapps\ulole\orm\UloleORM;
 
 class Migrator {
     private $database;
-    private $migrations;
+    private array $migrations;
     private $logging = false;
 
     public function __construct(string $database) {
@@ -33,15 +33,14 @@ class Migrator {
 
         foreach (scandir($folder) as $migrationFile) {
             if ($migrationFile !== "." && $migrationFile !== "..") {
-                $clazz = $namespace . "\\" . str_replace(".php", "", $migrationFile);
-                if (class_exists($clazz)) {
-
-                    array_push($this->migrations, $clazz);
-                } else {
-                    if ($this->logging) echo "[x] Couln't add $clazz" . "\n";
-                }
+                $this->migrations[] = new (require($migrationFile));
             }
         }
+        return $this;
+    }
+
+    public function addMigration(Migration $migration): Migrator {
+        $this->migrations[] = $migration;
         return $this;
     }
 
@@ -104,13 +103,8 @@ class Migrator {
     }
 
 
-    public function getMigrations() {
+    public function getMigrations(): array {
         return $this->migrations;
-    }
-
-    public function addMigrations($migration): Migrator {
-        array_push($this->migrations, $migration);
-        return $this;
     }
 
     public function setLogging(bool $logging): Migrator {
