@@ -23,7 +23,7 @@ trait ORMModel {
                 //if (in_array($fieldName, $this->ormInternals_getSettings()["exclude"]))
                 //    continue;
                 if (isset($this->{$fieldName}))
-                    $query->set($modelInformation->getFieldName(), $this->{$fieldName});
+                    $query->set($fieldName, $this->{$fieldName});
             }
             return $query->whereId(UloleORM::getModelInformation(static::class)->getIdentifierValue($this))->update();
         } else {
@@ -31,25 +31,30 @@ trait ORMModel {
         }
     }
 
-    public function insert(string $database = 'main'): bool {
+    public function insert(string $databaseName = 'main'): bool {
+        $database = UloleORM::getDatabase($databaseName);
         $fields = [];
         $values = [];
         $modelInfo = UloleORM::getModelInformation(static::class);
 
-        $createdAt = $modelInfo->getUpdatedAt();
-        if ($createdAt !== null && !isset($this->createdAt)) {
-            $fields[] = $modelInfo->getFieldName($createdAt);
-            $values[] = date("Y-m-d H:i:s");
+        $createdAt = $modelInfo->getCreatedAt();
+        if ($createdAt !== null && !isset($this->{$createdAt})) {
+            if ($modelInfo->getColumnInformation($createdAt)?->getType()?->getName() === \DateTime::class) {
+                $this->{$createdAt} = new \DateTime();
+            } else {
+                $this->{$createdAt} = date("Y-m-d H:i:s");
+            }
         }
 
         foreach ($modelInfo->getFields() as $fieldName => $columnInformation) {
             if (isset($this->{$fieldName})) {
                 $fields[] = $columnInformation->getFieldName();
-                $values[] = $this->{$fieldName};
+
+                $values[] = UloleORM::transformToDB($database->getDriver(), $columnInformation, $this->{$fieldName});
             }
         }
 
-        $insertion = UloleORM::getDatabase($database)->getDriver()->insert(UloleORM::getTableName(static::class), $fields, $values);
+        $insertion = UloleORM::getDatabase($databaseName)->getDriver()->insert(UloleORM::getTableName(static::class), $fields, $values);
 
         if ($insertion === false)
             return false;

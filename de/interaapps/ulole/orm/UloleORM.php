@@ -3,6 +3,7 @@
 namespace de\interaapps\ulole\orm;
 
 use de\interaapps\jsonplus\attributes\Serialize;
+use de\interaapps\ulole\orm\drivers\Driver;
 use ReflectionMethod;
 
 class UloleORM {
@@ -93,5 +94,34 @@ class UloleORM {
      */
     public static function getModelInformationList(): array {
         return self::$modelInformation;
+    }
+
+    public static function transformToDB(Driver $driver, ColumnInformation $columnInformation, $value) {
+        $type = $columnInformation->getType()?->getName();
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        } else if ($type === \DateTime::class) {
+            return $value->format('Y-m-d H:i:s');
+        } else if ($type !== null && class_exists($type) && in_array(ORMModel::class, class_uses($type))) {
+            return UloleORM::getModelInformation($type)->getIdentifierValue($value);
+        } else if ($type !== null && enum_exists($type)) {
+            return $value->name;
+        }
+
+        return $value;
+    }
+    public static function transformFromDB(Driver $driver, ColumnInformation $columnInformation, $value) {
+        $type = $columnInformation->getType()?->getName();
+        if ($value !== null) {
+            if ($type === \DateTime::class) {
+                return new \DateTime($value);
+            } else if ($type !== null && class_exists($type) && in_array(ORMModel::class, class_uses($type))) {
+                return (new \ReflectionClass($type))->newInstanceWithoutConstructor()->table()->whereId($value)->first();
+            }  else if ($type !== null && enum_exists($type)) {
+                return (new \ReflectionEnum($type))->getCase($value)->getValue();
+            }
+        }
+
+        return $value;
     }
 }

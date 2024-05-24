@@ -93,14 +93,14 @@ class Blueprint {
         return $this->custom($name, "YEAR");
     }
 
-    public function enum($name, array $set): Column {
-        $column = $this->custom($name, "ENUM", $set);
+    public function enum($name, array $enum): Column {
+        $column = $this->custom($name, "ENUM", $enum);
         $this->columns[] = $column;
         return $column;
     }
 
     public function set($name, array $set): Column {
-        $column = $this->custom($name, "ENUM", $set);
+        $column = $this->custom($name, "SET", $set);
         $this->columns[] = $column;
         return $column;
     }

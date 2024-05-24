@@ -15,16 +15,13 @@ class Database {
 
     private static $driverFactories = [];
 
-    /**
-     * @param string $username
-     * @param string|null $password
-     * @param string|null $database
-     * @param string $host
-     * @param int $port
-     * @param string $driver
-     */
-    public function __construct(string $username = "", string|null $password = null, string|null $database = null, string $host = 'localhost', int|null $port = null, string $driver = "mysql") {
-        $this->driver = self::getDriverFactories()[$driver]($username, $password, $database, $host, $port, $driver);
+    public function __construct(string|Driver $driver = "mysql", string $username = "", string|null $password = null, string|null $database = null, string $host = 'localhost', int|null $port = null) {
+        if ($driver instanceof Driver) {
+            $this->driver = $driver;
+        } else {
+            $this->driver = self::getDriverFactories()[$driver]($username, $password, $database, $host, $port, $driver);
+        }
+
     }
 
     public function create(string $name, callable $callable, bool $ifNotExists = false): bool {

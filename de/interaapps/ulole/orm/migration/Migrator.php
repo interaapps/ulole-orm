@@ -21,7 +21,7 @@ class Migrator {
         if (MigrationModel::table($this->database)->count() == 0) {
             if ($this->logging) echo "Creating first migration\n";
             $migration = new MigrationModel;
-            $migration->migratedModel = 'de\interaapps\ulole\orm\migration\table\CreateMigrationsMigration';
+            $migration->migratedModel = MigrationModel::class;
             $migration->version = 0;
             $migration->save();
         }

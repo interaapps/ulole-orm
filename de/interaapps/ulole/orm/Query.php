@@ -235,7 +235,7 @@ class Query {
      * @return $this
      */
     public function set($field, $value): Query {
-        $this->queries[] = ['type' => 'SET', 'query' => $this->modelInformation->getFieldName($field) . ' = ?', 'val' => (is_bool($value) ? ($value ? 'true' : 'false') : $value)];
+        $this->queries[] = ['type' => 'SET', 'query' => $this->modelInformation->getFieldName($field) . ' = ?', 'val' => UloleORM::transformToDB($this->database->getDriver(), $this->modelInformation->getColumnInformation($field), $value)];
         return $this;
     }
 
@@ -312,7 +312,11 @@ class Query {
     public function update(): bool {
         $updatedAt = $this->modelInformation->getUpdatedAt();
         if ($updatedAt !== null) {
-            $this->set($updatedAt, date("Y-m-d H:i:s"));
+            if ($this->modelInformation->getColumnInformation($updatedAt)?->getType()?->getName() === \DateTime::class) {
+                $this->set($updatedAt, new \DateTime());
+            } else {
+                $this->set($updatedAt, date("Y-m-d H:i:s"));
+            }
         }
 
         return $this->database->getDriver()->update($this->model, $this);
@@ -320,8 +324,14 @@ class Query {
 
     public function delete(): bool {
         $deletedAt = $this->modelInformation->getDeletedAt();
-        if ($deletedAt !== null)
-            return $this->set($this->modelInformation->getFieldName($deletedAt), date("Y-m-d H:i:s"))->update();
+        if ($deletedAt !== null) {
+
+            if ($this->modelInformation->getColumnInformation($deletedAt)?->getType()?->getName() === \DateTime::class) {
+                $this->set($deletedAt, new \DateTime());
+            } else {
+                $this->set($deletedAt, date("Y-m-d H:i:s"));
+            }
+        }
 
         return $this->database->getDriver()->delete($this->model, $this);
     }

@@ -39,7 +39,7 @@ class PostgresDriver extends SQLDriver {
         $existingIndexes = $this->getIndexes($name);
         $existingConstraints = $this->getConstraints($name);
         $uniqueKeys = array_map(fn ($f) => $f["constraint_name"], array_filter($existingConstraints, fn($f) => $f["constraint_type"] == "UNIQUE"));
-        var_dump($existingColumns);
+
         $blueprint = new Blueprint();
         $callable($blueprint);
         $sql = "ALTER TABLE $name ";

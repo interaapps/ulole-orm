@@ -22,7 +22,7 @@ abstract class SQLDriver implements Driver {
         return $this->connection->query($sql);
     }
 
-    public function preparedQuery(string $model, string $query, array $vars = [], bool $returnResult = false): PDOStatement|bool|null {
+    public function preparedQuery(string $query, array $vars = [], bool $returnResult = false): PDOStatement|bool|null {
         $statement = $this->connection->prepare($query);
 
         $result = $statement->execute($vars);
@@ -30,7 +30,7 @@ abstract class SQLDriver implements Driver {
             return $result;
         if ($result === false)
             return null;
-        $statement->setFetchMode(PDO::FETCH_CLASS, $model);
+
         return $statement;
     }
 
@@ -94,7 +94,7 @@ abstract class SQLDriver implements Driver {
     }
 
     public function insert(string $table, array $fields, array $values): string|false {
-        $query = 'INSERT INTO ' . $table . ' (';
+        $query = "INSERT INTO {$table} (";
 
         $query .= implode(", ",  $fields);
         $query .= ') VALUES (';
@@ -103,7 +103,7 @@ abstract class SQLDriver implements Driver {
 
         $statement = $this->connection->prepare($query);
 
-        $result = $statement->execute(array_map(fn($f) => is_bool($f) ? ($f ? "true" : "false") : $f, $values));
+        $result = $statement->execute(array_map(fn($f) => is_bool($f) ? ($f ? 1 : 0) : $f, $values));
         if (!$result)
             return false;
 
@@ -219,27 +219,32 @@ abstract class SQLDriver implements Driver {
 
     public function delete(string $model, Query $query): bool {
         $q = $this->createQuery($query);
-        return  $this->preparedQuery($model, 'DELETE FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars, true) !== false;
+        return  $this->preparedQuery('DELETE FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars, true) !== false;
     }
 
     public function update(string $model, Query $query): bool {
         $q = $this->createQuery($query);
-        return $this->preparedQuery($model, 'UPDATE ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars, true) !== false;
+        return $this->preparedQuery('UPDATE ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars, true) !== false;
     }
 
     public function get(string $model, Query $query): array {
         $q = $this->createQuery($query);
 
-        $statement = $this->preparedQuery($model, 'SELECT * FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars);
+        $statement = $this->preparedQuery('SELECT * FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars);
+        $statement->setFetchMode(PDO::FETCH_DEFAULT);
         $result = $statement->fetchAll();
+        $entries = [];
+
         foreach ($result as $entry) {
-            $entry->ormInternals_setEntryExists();
+            $instance = (new \ReflectionClass($model))->newInstance();
+            $instance->ormInternals_setEntryExists();
+
             foreach (UloleORM::getModelInformation($model)->getFields() as $name => $colInfo) {
-                if (isset($entry->{$colInfo->getFieldName()}))
-                    $entry->{$name} = $entry->{$colInfo->getFieldName()};
+                $instance->{$name} = UloleORM::transformFromDB($this, $colInfo, $entry[$colInfo->getFieldName()]);
             }
+            $entries[] = $instance;
         }
-        return $result;
+        return $entries;
     }
 
     private function getField(string $model, Query $query, string $raw, string|null $values = null): mixed {
@@ -248,7 +253,7 @@ abstract class SQLDriver implements Driver {
         if ($values !== null)
             $raw .= "($values)";
 
-        $statement = $this->preparedQuery($model, 'SELECT ' . $raw . ' as num FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars);
+        $statement = $this->preparedQuery('SELECT ' . $raw . ' as num FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars);
         $statement->setFetchMode(PDO::FETCH_NUM);
         $result = $statement->fetch();
         if ($result === false)

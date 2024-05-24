@@ -140,11 +140,24 @@ class ModelInformation {
 
             $columns = array_map(function ($field) {
                 $type = $field->getColumnAttribute()->sqlType;
+                $size = $field->getColumnAttribute()->size;
+                $typeName = $field->getType()->getName();
+
                 if ($type == null) {
                     if (isset(self::PHP_SQL_TYPES[$field->getType()->getName()])) {
                         $type = self::PHP_SQL_TYPES[$field->getType()->getName()];
                         if ($type == "TEXT" && $field->getColumnAttribute()->size !== null)
                             $type = "VARCHAR";
+                    } else {
+                        if ($typeName === \DateTime::class) {
+                            $type = 'TIMESTAMP';
+                        } else if ($typeName !== null && class_exists($typeName) && in_array(ORMModel::class, class_uses($typeName))) {
+                            $type = 'INTEGER';
+                        } else if ($typeName !== null && enum_exists($typeName)) {
+                            $enum = new \ReflectionEnum($typeName);
+                            $size = array_map(fn ($case) => $case->getName(), $enum->getCases());
+                            $type = 'ENUM';
+                        }
                     }
                 }
 
@@ -155,8 +168,8 @@ class ModelInformation {
                     "type" => $type,
                     "hasIndex" => $field->getColumnAttribute()->index,
                     "identifier" => $isIdentifier,
-                    "blueprintHandler" => function (Blueprint $blueprint) use ($isIdentifier, $type, $field) {
-                        $col = $blueprint->custom($field->getFieldName(), $type, $field->getColumnAttribute()->size);
+                    "blueprintHandler" => function (Blueprint $blueprint) use ($isIdentifier, $type, $field, $size) {
+                        $col = $blueprint->custom($field->getFieldName(), $type, $size);
 
                         if ($type == "INTEGER" && $isIdentifier)
                             $col->ai()->primary();
