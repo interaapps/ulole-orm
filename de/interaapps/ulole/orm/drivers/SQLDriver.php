@@ -2,8 +2,11 @@
 
 namespace de\interaapps\ulole\orm\drivers;
 
+use de\interaapps\ulole\orm\attributes\HasMany;
+use de\interaapps\ulole\orm\ColumnInformation;
 use de\interaapps\ulole\orm\migration\Blueprint;
 use de\interaapps\ulole\orm\migration\Column;
+use de\interaapps\ulole\orm\ModelInformation;
 use de\interaapps\ulole\orm\Query;
 use de\interaapps\ulole\orm\UloleORM;
 use PDO;
@@ -151,7 +154,7 @@ abstract class SQLDriver implements Driver {
         return array_map(fn ($r) => $r[0], $this->query("SHOW TABLES;")->fetchAll());
     }
 
-    public function createQuery(Query $q): stdClass {
+    public function createQuery(Query $q, $usingWhere = true): stdClass {
         $deletedAt = $q->getModelInformation()->getDeletedAt();
         if ($deletedAt !== null && !$q->isWithDeleted())
             $q->isNull($q->getModelInformation()->getFieldName($deletedAt));
@@ -166,10 +169,29 @@ abstract class SQLDriver implements Driver {
             if (!$usedSet) {
                 $out->query .= " SET ";
                 $usedSet = true;
+                $usingWhere = false;
             } else
                 $out->query .= ",";
             $out->query .= ' ' . $query["query"] . ' ';
             $out->vars[] = $query['val'];
+        }
+
+
+        if ($usingWhere) {
+            foreach ($q->getWithRelations() as $with) {
+                if ($with['type'] === 'hasMany') {
+                    /** @type HasMany $field */
+                    $field = $with["field"];
+                    $modelInfo = UloleORM::getModelInformation($field->class);
+                    $column = $modelInfo->getColumnInformation($field->fieldId);
+                    $out->query .= " LEFT  OUTER JOIN {$modelInfo->getName()} ON {$q->getModelInformation()->getName()}.{$q->getModelInformation()->getIdentifier()} = {$modelInfo->getName()}.{$column->getFieldName()}";
+                } else if ($with['type'] === 'oneToOne') {
+                    /** @type ColumnInformation $field */
+                    $field = $with["field"];
+                    $modelInfo = UloleORM::getModelInformation($field->getProperty()->getType()?->getName());
+                    $out->query .= " LEFT OUTER JOIN {$modelInfo->getName()} ON {$q->getModelInformation()->getName()}.{$field->getFieldName()} = {$modelInfo->getName()}.{$modelInfo->getIdentifier()}";
+                }
+            }
         }
 
         foreach ($q->getQueries() as $query) {
@@ -204,7 +226,7 @@ abstract class SQLDriver implements Driver {
             } else if ($query["type"] == 'WHERE_EXISTS' || $query["type"] == 'WHERE_NOT_EXISTS') {
                 $out->query .= " WHERE " . ($query["type"] == 'WHERE_NOT_EXISTS' ? "NOT " : "") . "EXISTS (" . $query["query"] . ")";
             } else if ($query["type"] == 'WHERE_IN') {
-                $out->query .= " WHERE " . $query["column"] . ($query["not"] ? " NOT " : ' ') . " IN (" . $query["query"] . ")";
+                $out->query .= " WHERE " . $q->getModelInformation()->getName() . '.' . $query["column"] . ($query["not"] ? " NOT " : ' ') . " IN (" . $query["query"] . ")";
                 $out->vars = $query["vars"];
             }
         }
@@ -214,37 +236,114 @@ abstract class SQLDriver implements Driver {
 
         if ($q->getLimit() !== null)
             $out->query .= ' LIMIT ' . $q->getLimit() . ' ' . ($q->getOffset() === null ? '' : 'OFFSET ' . $q->getOffset()) . ' ';
+
         return $out;
     }
 
     public function delete(string $model, Query $query): bool {
-        $q = $this->createQuery($query);
+        $q = $this->createQuery($query, false);
         return  $this->preparedQuery('DELETE FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars, true) !== false;
     }
 
     public function update(string $model, Query $query): bool {
-        $q = $this->createQuery($query);
+        $q = $this->createQuery($query, false);
         return $this->preparedQuery('UPDATE ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars, true) !== false;
     }
 
     public function get(string $model, Query $query): array {
+        $modelInfo = UloleORM::getModelInformation($model);
+
         $q = $this->createQuery($query);
 
-        $statement = $this->preparedQuery('SELECT * FROM ' . UloleORM::getTableName($model) . $q->query . ';', $q->vars);
+        $select = array_map(fn($f) => $modelInfo->getName() .'.'. $f->getFieldName(). ' AS '. $f->getFieldName(), $modelInfo->getFields());
+
+        $hasRelations = false;
+        foreach ($query->getWithRelations() as $with) {
+            $hasRelations = true;
+            /**
+             * @type ModelInformation $lmodel
+             */
+            $lmodel = $with['model'];
+            foreach ($lmodel->getFields() as $field) {
+                $select[] = "{$lmodel->getName()}.{$field->getFieldName()} as ORM\$JOIN_{$with['fieldName']}\$\${$field->getFieldName()}";
+            }
+        }
+
+        $joinedSelect = implode(', ', $select);
+        $sqlQuery = "SELECT {$joinedSelect} FROM " . UloleORM::getTableName($model) . $q->query . ';';
+
+        $statement = $this->preparedQuery($sqlQuery, $q->vars);
+
         $statement->setFetchMode(PDO::FETCH_DEFAULT);
         $result = $statement->fetchAll();
         $entries = [];
 
         foreach ($result as $entry) {
-            $instance = (new \ReflectionClass($model))->newInstance();
-            $instance->ormInternals_setEntryExists();
+            $item = $this->generateModelFromArray($model, $entry);
+            $push = true;
 
-            foreach (UloleORM::getModelInformation($model)->getFields() as $name => $colInfo) {
-                $instance->{$name} = UloleORM::transformFromDB($this, $colInfo, $entry[$colInfo->getFieldName()]);
+            // Merge existing joined values
+            if ($hasRelations) {
+                foreach ($entries as $subEntry) {
+                    if ($subEntry->{$modelInfo->getIdentifier()} === $item->{$modelInfo->getIdentifier()}) {
+                        foreach ($query->getWithRelations() as $with) {
+                            if ($with['type'] === 'hasMany') {
+                                if (($subEntry->{$with['fieldName']} ?? false) && ($item->{$with['fieldName']} ?? false)) {
+                                    foreach ($item->{$with['fieldName']} as $i) {
+                                        $subEntry->{$with['fieldName']}[] = $i;
+                                    }
+                                }
+                                $push = false;
+                            }
+                        }
+                        break;
+                    }
+                }
             }
-            $entries[] = $instance;
+
+            if ($push)
+                $entries[] = $item;
         }
         return $entries;
+    }
+
+    /**
+     * @template T
+     * @param class-string<T> $model
+     * @param array $entry
+     * @return T
+     * @throws \ReflectionException
+     */
+    private function generateModelFromArray(string $model, array $entry) {
+        $modelInfo = UloleORM::getModelInformation($model);
+        $instance = (new \ReflectionClass($model))->newInstance();
+        $instance->ormInternals_setEntryExists();
+
+        foreach ($modelInfo->getHasManyFields() as $name => $hasMany) {
+            $instance->{$name} ??= [];
+
+            $values = $this->getJoinedVals($name, $entry);
+            if ($values !== null) {
+                foreach ($values as $val) {
+                    if ($val === null)
+                        continue;
+                    $instance->{$name}[] = $this->generateModelFromArray($hasMany->class, $values);
+                    break;
+                }
+            }
+        }
+
+        foreach ($modelInfo->getFields() as $name => $colInfo) {
+            if ($colInfo->isReference()) {
+                $values = $this->getJoinedVals($colInfo->getFieldName(), $entry);
+                if ($values !== null) {
+                   $instance->{$name} = $this->generateModelFromArray($colInfo->getType()->getName(), $values);
+                }
+            } else {;
+                $instance->{$name} = UloleORM::transformFromDB($this, $colInfo, $entry[$colInfo->getFieldName()]);
+            }
+        }
+        return $instance;
     }
 
     private function getField(string $model, Query $query, string $raw, string|null $values = null): mixed {
@@ -260,6 +359,25 @@ abstract class SQLDriver implements Driver {
             return null;
 
         return $result[0];
+    }
+
+    protected function getJoinedVals($fieldName, $entry): ?array
+    {
+        $values = [];
+        $found = false;
+        foreach ($entry as $i => $val) {
+            if (str_starts_with($i, 'ORM$JOIN_')) {
+                [$rel, $field] = explode('$$', str_replace('ORM$JOIN_', '', $i));
+
+                if ($fieldName === $rel) {
+                    $found = true;
+                    $values[$field] = $val;
+                }
+            }
+        }
+        if ($found === false)
+            return null;
+        return $values;
     }
 
     public function count(string $model, Query $query): int|float {
@@ -281,5 +399,9 @@ abstract class SQLDriver implements Driver {
 
     public function max(string $model, Query $query, string $field): int|float {
         return $this->getField($model, $query, "MAX", $field);
+    }
+
+    public function isSupported(string $feature) {
+        return true;
     }
 }

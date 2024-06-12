@@ -3,6 +3,7 @@
 namespace de\interaapps\ulole\orm;
 
 use Closure;
+use de\interaapps\ulole\orm\attributes\HasMany;
 use PDO;
 use PDOStatement;
 
@@ -18,6 +19,9 @@ class Query {
     private array|null $orderBy = null;
     private bool $temporaryQuery = false;
     private bool $withDeleted = false;
+
+    private array $withRelations = [];
+
     private ModelInformation $modelInformation;
 
     /**
@@ -27,13 +31,47 @@ class Query {
         $this->database = $database;
         $this->model = $model;
         $this->modelInformation = UloleORM::getModelInformation($model);
+
+        foreach ($this->modelInformation->getFields() as $name => $field) {
+            if ($field->getColumnAttribute()->fetch && $field->isReference()) {
+                $this->with($name);
+            }
+        }
+        foreach ($this->modelInformation->getHasManyFields() as $name => $field) {
+            if ($field->fetch) {
+                $this->with($name);
+            }
+        }
     }
 
     /**
      * @return $this
      */
     public function whereRaw(string $field, mixed $operator, mixed $val = null, array|null $vals = null): Query {
-        $this->queries[] = ['type' => 'AND', 'query' => $field . ' ' . $operator . ' ' . $val, 'vals' => $vals];
+        $this->queries[] = ['type' => 'AND', 'query' => $this->modelInformation->getName() . '.' . $field . ' ' . $operator . ' ' . $val, 'vals' => $vals];
+        return $this;
+    }
+
+
+    public function without(string $field): Query {
+        foreach ($this->withRelations as $i => $with) {
+            if ($with['fieldName'] === $field) {
+                array_splice($this->withRelations, $i, 1);
+            }
+        }
+        return $this;
+    }
+    public function with(string $field): Query {
+        // Delete duplicates
+        $this->without($field);
+
+        if ($this->modelInformation->getHasManyField($field) !== null) {
+            $hasMany = $this->modelInformation->getHasManyField($field);
+            $this->withRelations[] = ['type' => 'hasMany', 'field' => $hasMany, 'fieldName' => $field, 'model' => UloleORM::getModelInformation($hasMany->class)];
+        } else {
+            $colInfo = $this->modelInformation->getColumnInformation($field);
+            $this->withRelations[] = ['type' => 'oneToOne', 'field' => $colInfo, 'fieldName' => $field, 'model' => UloleORM::getModelInformation($colInfo->getProperty()->getType()->getName())];
+        }
         return $this;
     }
 
@@ -393,6 +431,13 @@ class Query {
 
     public function getOrderBy(): ?array {
         return $this->orderBy;
+    }
+
+    /**
+     * @return array<array<string, HasMany|ColumnInformation>>
+     */
+    public function getWithRelations(): array {
+        return $this->withRelations;
     }
 }
 

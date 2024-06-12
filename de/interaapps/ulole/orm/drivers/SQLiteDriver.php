@@ -34,4 +34,12 @@ class SQLiteDriver extends SQLDriver {
     public function getIndexes(string $name): array {
         return array_map(fn($f) => $f[0], $this->query("PRAGMA index_list($name);")->fetchAll());
     }
+
+    public function isSupported(string $feature)
+    {
+        if ($feature === 'ENUM_MIGRATION')
+            return false;
+
+        return parent::isSupported($feature);
+    }
 }

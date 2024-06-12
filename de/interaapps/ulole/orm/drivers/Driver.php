@@ -22,4 +22,5 @@ interface Driver {
     public function min(string $model, Query $query, string $field): int|float;
     public function max(string $model, Query $query, string $field): int|float;
 
+    public function isSupported(string $feature);
 }

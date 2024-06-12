@@ -5,6 +5,7 @@ namespace de\interaapps\ulole\orm;
 use de\interaapps\ulole\orm\attributes\Column;
 use de\interaapps\ulole\orm\attributes\CreatedAt;
 use de\interaapps\ulole\orm\attributes\DeletedAt;
+use de\interaapps\ulole\orm\attributes\HasMany;
 use de\interaapps\ulole\orm\attributes\Identifier;
 use de\interaapps\ulole\orm\attributes\Table;
 use de\interaapps\ulole\orm\attributes\UpdatedAt;
@@ -21,6 +22,7 @@ class ModelInformation {
      * @var ColumnInformation[]
      */
     private array $fields;
+    private array $hasManyFields = [];
     private ?string $name = null;
     private bool $disableAutoMigrate = false;
 
@@ -77,6 +79,18 @@ class ModelInformation {
                     if (count($property->getAttributes(DeletedAt::class)))
                         $this->deletedAt = $property->getName();
                 }
+
+
+                $hasManyAttributes = $property->getAttributes(HasMany::class);
+                if (count($hasManyAttributes) > 0) {
+                    /**
+                     * @type HasMany $hasManyAttribute
+                     */
+                    $hasManyAttribute = $hasManyAttributes[0]->newInstance();
+
+                    $this->hasManyFields[$property->getName()] = $hasManyAttribute;
+                }
+
             }
         }
     }
@@ -117,6 +131,18 @@ class ModelInformation {
         return $this->fields[$name] ?? null;
     }
 
+    public function getHasManyField(string $name): HasMany|null {
+        return $this->hasManyFields[$name] ?? null;
+    }
+
+    /**
+     * @return array<HasMany>
+     */
+    public function getHasManyFields(): array
+    {
+        return $this->hasManyFields;
+    }
+
     public function getFieldValue($obj, string $field): string {
         return $obj->{$this->getFieldName($field)};
     }
@@ -138,7 +164,7 @@ class ModelInformation {
 
             $fields = $this->getFields();
 
-            $columns = array_map(function ($field) {
+            $columns = array_map(function ($field) use ($database) {
                 $type = $field->getColumnAttribute()->sqlType;
                 $size = $field->getColumnAttribute()->size;
                 $typeName = $field->getType()->getName();
@@ -154,9 +180,13 @@ class ModelInformation {
                         } else if ($typeName !== null && class_exists($typeName) && in_array(ORMModel::class, class_uses($typeName))) {
                             $type = 'INTEGER';
                         } else if ($typeName !== null && enum_exists($typeName)) {
-                            $enum = new \ReflectionEnum($typeName);
-                            $size = array_map(fn ($case) => $case->getName(), $enum->getCases());
-                            $type = 'ENUM';
+                            if ($database->getDriver()->isSupported('ENUM_MIGRATION')) {
+                                $enum = new \ReflectionEnum($typeName);
+                                $size = array_map(fn($case) => $case->getName(), $enum->getCases());
+                                $type = 'ENUM';
+                            } else {
+                                $type = 'TEXT';
+                            }
                         }
                     }
                 }

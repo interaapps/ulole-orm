@@ -13,6 +13,7 @@ class Column {
         public bool            $index = false,
         public bool            $id = false,
         public bool            $unique = false,
+        public bool            $fetch = true,
     ) {
     }
 }

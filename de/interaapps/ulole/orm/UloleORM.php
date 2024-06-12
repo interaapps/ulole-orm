@@ -115,9 +115,9 @@ class UloleORM {
         if ($value !== null) {
             if ($type === \DateTime::class) {
                 return new \DateTime($value);
-            } else if ($type !== null && class_exists($type) && in_array(ORMModel::class, class_uses($type))) {
+            }/* else if ($columnInformation->isReference()) {
                 return (new \ReflectionClass($type))->newInstanceWithoutConstructor()->table()->whereId($value)->first();
-            }  else if ($type !== null && enum_exists($type)) {
+            }*/ else if ($type !== null && enum_exists($type)) {
                 return (new \ReflectionEnum($type))->getCase($value)->getValue();
             }
         }

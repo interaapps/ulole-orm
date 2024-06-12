@@ -208,18 +208,42 @@ class MyModel {
 
 #[Table('my-model')]
 class MyModel {
+    use ORMModel;
+    
     #[Column]
     public int $id;
     
     // Automatically fills the id in database
     #[Column]
     public ?MySecondModel $second;
+    
+    /** @var array<Post> */
+    #[HasMany(Post::class, 'myModel')]
+    public array $second = [];
 }
 
 #[Table('my-second-model')]
 class MySecondModel {
+    use ORMModel;
     ...
 }
+
+#[Table('posts')]
+class Post {
+    use ORMModel;
+    
+    #[Column]
+    public MyModel $myModel;
+}
+
+// Exlude relation
+MyModel::table()->without('second')...;
+
+// Disable auto-fetch
+#[Column(fetch: false)]
+public ?MySecondModel $second;
+
+MyModel::table()->with('second')...;
 ```
 
 ## Migration

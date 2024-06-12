@@ -12,12 +12,26 @@ use ReflectionUnionType;
 class ColumnInformation {
     private ReflectionNamedType|ReflectionUnionType|ReflectionIntersectionType|null $type;
 
+    private ?bool $isReference = null;
+
     public function __construct(
         private string             $fieldName,
         private Column             $columnAttribute,
         private ReflectionProperty $property
     ) {
         $this->type = $property->getType();
+    }
+
+    /**
+     * @return bool|null
+     */
+    public function isReference(): ?bool
+    {
+        if ($this->isReference === null) {
+            $type = $this->type?->getName();
+            $this->isReference = $type !== null && class_exists($type) && in_array(ORMModel::class, class_uses($type));
+        }
+        return $this->isReference;
     }
 
 
